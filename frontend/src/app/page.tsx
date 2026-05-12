@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Reveal, RevealSection } from "../components/shared/motion/Reveal";
+import ScrollLink from "../components/shared/ScrollLink";
 
 const highlights = [
   {
@@ -31,22 +33,22 @@ export default function Home() {
 
       <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Sport Space logo" width={44} height={44} />
+          <Image src="/img/logo.png" alt="Sport Space logo" width={44} height={44} />
           <div className="leading-tight">
             <p className="text-lg font-semibold tracking-tight">Sport Space</p>
             <p className="text-xs text-text-muted">Smart booking arena</p>
           </div>
         </div>
         <nav className="hidden items-center gap-8 text-sm text-text-muted md:flex">
-          <Link href="#features" className="hover:text-text-primary">
+          <ScrollLink href="#features" className="hover:text-text-primary">
             Features
-          </Link>
-          <Link href="#venues" className="hover:text-text-primary">
+          </ScrollLink>
+          <ScrollLink href="#venues" className="hover:text-text-primary">
             Venues
-          </Link>
-          <Link href="#pricing" className="hover:text-text-primary">
+          </ScrollLink>
+          <ScrollLink href="#pricing" className="hover:text-text-primary">
             Pricing
-          </Link>
+          </ScrollLink>
         </nav>
         <div className="flex items-center gap-3">
           <button className="hidden rounded-full border border-border px-4 py-2 text-sm text-text-primary transition hover:border-primary md:inline-flex">
@@ -60,7 +62,7 @@ export default function Home() {
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col gap-16 px-6 pb-20 pt-10 md:px-12">
         <section className="grid items-center gap-12 md:grid-cols-[1.1fr_0.9fr]">
-          <div className="flex flex-col gap-6">
+          <Reveal className="flex flex-col gap-6" y={28}>
             <p className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-surface/70 px-4 py-2 text-xs uppercase tracking-[0.2em] text-text-muted">
               Next-gen sport booking
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
@@ -91,9 +93,13 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          </div>
+          </Reveal>
 
-          <div className="rounded-3xl border border-border bg-surface/80 p-6 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+          <Reveal
+            className="rounded-3xl border border-border bg-surface/80 p-6 shadow-[0_0_40px_rgba(0,0,0,0.35)]"
+            delay={0.1}
+            y={32}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-muted">Live availability</p>
@@ -125,25 +131,26 @@ export default function Home() {
                 </p>
               </div>
             </div>
-          </div>
+          </Reveal>
         </section>
 
         <section id="features" className="grid gap-6 md:grid-cols-3">
-          {highlights.map((item) => (
-            <div
+          {highlights.map((item, index) => (
+            <Reveal
               key={item.title}
               className="rounded-2xl border border-border bg-surface/70 p-6 text-sm shadow-[0_0_20px_rgba(0,0,0,0.25)]"
+              delay={index * 0.08}
             >
               <h3 className="text-lg font-semibold text-text-primary">
                 {item.title}
               </h3>
               <p className="mt-3 text-text-muted">{item.description}</p>
-            </div>
+            </Reveal>
           ))}
         </section>
 
         <section id="venues" className="grid gap-6 md:grid-cols-[0.7fr_1.3fr]">
-          <div className="rounded-3xl border border-border bg-ink-2 p-6">
+          <Reveal className="rounded-3xl border border-border bg-ink-2 p-6">
             <p className="text-sm text-text-muted">Multi-sport ready</p>
             <h2 className="mt-2 text-2xl font-semibold">
               Padel, futsal, mini soccer, hingga tennis indoor.
@@ -152,24 +159,25 @@ export default function Home() {
               Semua venue dalam satu dashboard, lengkap dengan pricing rules dan
               promo per jam.
             </p>
-          </div>
+          </Reveal>
           <div className="grid gap-4 md:grid-cols-3">
-            {["Padel", "Futsal", "Mini Soccer"].map((sport) => (
-              <div
+            {["Padel", "Futsal", "Mini Soccer"].map((sport, index) => (
+              <Reveal
                 key={sport}
                 className="rounded-2xl border border-border bg-surface/80 p-5 text-sm"
+                delay={index * 0.08}
               >
                 <p className="text-xs uppercase tracking-[0.2em] text-text-muted">
                   {sport}
                 </p>
                 <p className="mt-4 text-lg font-semibold">4 venue aktif</p>
                 <p className="mt-2 text-text-muted">Harga fleksibel per jam.</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </section>
 
-        <section
+        <RevealSection
           id="pricing"
           className="rounded-3xl border border-border bg-gradient-to-r from-ink-2 via-surface to-ink-2 p-8"
         >
@@ -184,7 +192,7 @@ export default function Home() {
               Preview Rules
             </button>
           </div>
-        </section>
+        </RevealSection>
       </main>
     </div>
   );

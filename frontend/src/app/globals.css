@@ -30,6 +30,10 @@
   --font-display: var(--font-space);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--ink);
   color: var(--text-primary);
