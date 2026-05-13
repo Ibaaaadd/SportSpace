@@ -1,16 +1,6 @@
 import type { Metadata } from "next";
-import { Sora, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space",
-  subsets: ["latin"],
-});
-
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-});
+import "@fortawesome/fontawesome-free/css/all.min.css";
 
 export const metadata: Metadata = {
   title: "Sport Space",
@@ -23,10 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${spaceGrotesk.variable} ${sora.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
