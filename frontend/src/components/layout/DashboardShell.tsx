@@ -52,7 +52,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : null}
-      <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 pb-10 pt-6 sm:px-6">
+      <div className="flex w-full gap-6 px-4 pb-10 pt-6 sm:px-6">
         <Sidebar />
         <main className="min-h-[70vh] flex-1 rounded-3xl border border-border bg-surface/70 p-6 shadow-[0_0_24px_rgba(0,0,0,0.25)]">
           {children}

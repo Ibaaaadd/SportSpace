@@ -35,7 +35,7 @@ export default function Sidebar({
     <aside
       className={`${
         isDesktop
-          ? "hidden w-64 shrink-0 lg:flex"
+          ? "hidden w-64 shrink-0 lg:sticky lg:top-24 lg:flex"
           : "flex w-full max-w-xs"
       } flex-col gap-4 rounded-3xl border border-border bg-surface/80 p-5 shadow-[0_0_24px_rgba(0,0,0,0.25)] ${
         className ?? ""
