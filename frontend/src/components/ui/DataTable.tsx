@@ -14,6 +14,7 @@ export type DataTableProps<T> = {
   columns: Column<T>[];
   data: T[];
   emptyMessage?: string;
+  striped?: boolean;
 };
 
 const alignStyles: Record<Align, string> = {
@@ -26,16 +27,17 @@ export default function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
   emptyMessage = "Belum ada data.",
+  striped = true,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface/70">
+    <div className="overflow-hidden rounded-xl border border-border">
       <table className="w-full border-collapse text-sm">
-        <thead className="bg-ink-2 text-xs uppercase tracking-[0.2em] text-text-muted">
-          <tr>
+        <thead>
+          <tr className="border-b border-border bg-ink-2">
             {columns.map((column) => (
               <th
                 key={String(column.key)}
-                className={`border-b border-border px-4 py-3 font-semibold ${
+                className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-muted ${
                   alignStyles[column.align ?? "left"]
                 } ${column.className ?? ""}`}
               >
@@ -58,18 +60,20 @@ export default function DataTable<T extends Record<string, unknown>>({
             data.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
-                className="border-b border-border/60 last:border-b-0"
+                className={`border-b border-border/50 last:border-b-0 transition-colors hover:bg-ink-2/60 ${
+                  striped && rowIndex % 2 === 1 ? "bg-ink-2/20" : ""
+                }`}
               >
                 {columns.map((column) => (
                   <td
                     key={String(column.key)}
-                    className={`px-4 py-3 text-text-primary ${
+                    className={`px-4 py-3 text-sm text-text-primary ${
                       alignStyles[column.align ?? "left"]
                     } ${column.className ?? ""}`}
                   >
                     {column.render
                       ? column.render(row)
-                      : String((row as Record<string, unknown>)[column.key])}
+                      : String((row as Record<string, unknown>)[column.key as string] ?? "")}
                   </td>
                 ))}
               </tr>

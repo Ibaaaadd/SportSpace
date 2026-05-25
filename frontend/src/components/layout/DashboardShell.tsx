@@ -11,7 +11,9 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-ink text-text-primary">
       <Navbar onOpenMenu={() => setMenuOpen(true)} />
-      {menuOpen ? (
+
+      {/* Mobile drawer */}
+      {menuOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <button
             type="button"
@@ -19,42 +21,32 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
             onClick={() => setMenuOpen(false)}
             aria-label="Close menu"
           />
-          <div className="relative z-10 flex h-full w-[80vw] max-w-xs flex-col bg-ink p-4">
-            <div className="flex items-center justify-between px-1 pb-4">
+          <div className="relative z-10 flex h-full w-72 flex-col overflow-y-auto bg-ink p-5 shadow-[4px_0_24px_rgba(0,0,0,0.4)]">
+            <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-text-muted">
-                  Menu
-                </p>
-                <p className="text-lg font-semibold">Control Center</p>
+                <p className="text-[10px] uppercase tracking-widest text-text-muted">Navigasi</p>
+                <p className="mt-0.5 text-sm font-semibold">Control Center</p>
               </div>
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-primary transition hover:border-secondary"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border text-text-muted transition hover:border-secondary hover:text-text-primary"
                 aria-label="Close menu"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M6 6l12 12M18 6l-12 12" />
                 </svg>
               </button>
             </div>
-            <Sidebar
-              variant="drawer"
-              onItemClick={() => setMenuOpen(false)}
-              className="border-none bg-transparent p-0 shadow-none"
-            />
+            <Sidebar variant="drawer" onItemClick={() => setMenuOpen(false)} />
           </div>
         </div>
-      ) : null}
-      <div className="flex w-full gap-6 px-4 pb-10 pt-6 sm:px-6">
+      )}
+
+      {/* Main layout */}
+      <div className="mx-auto flex w-full max-w-screen-2xl gap-6 px-4 pb-12 pt-6 sm:px-6">
         <Sidebar />
-        <main className="min-h-[70vh] flex-1 rounded-3xl border border-border bg-surface/70 p-6 shadow-[0_0_24px_rgba(0,0,0,0.25)]">
+        <main className="min-h-[80vh] flex-1 overflow-hidden rounded-2xl border border-border bg-surface/60 p-6 shadow-[0_0_40px_rgba(0,0,0,0.2)]">
           {children}
         </main>
       </div>
