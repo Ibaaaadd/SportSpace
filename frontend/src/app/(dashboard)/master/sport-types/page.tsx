@@ -103,11 +103,17 @@ function SportTypesContent() {
   const { push } = useToast();
   const [items, setItems] = useState<SportType[]>(INITIAL_DATA);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [editTarget, setEditTarget] = useState<SportType | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SportType | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+
+  function handleRefresh() {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1200);
+  }
 
   const filtered = items.filter(
     (i) =>
@@ -258,6 +264,8 @@ function SportTypesContent() {
             columns={columns}
             data={filtered}
             emptyMessage="Tidak ada jenis olahraga ditemukan."
+            loading={loading}
+            onRefresh={handleRefresh}
           />
         </CardContent>
       </Card>
@@ -265,6 +273,7 @@ function SportTypesContent() {
       {/* Add / Edit modal */}
       <Modal
         open={formOpen}
+        variant={editTarget ? "edit" : "create"}
         title={editTarget ? "Edit Jenis Olahraga" : "Tambah Jenis Olahraga"}
         description={editTarget ? `Perbarui data ${editTarget.name}.` : "Isi detail jenis olahraga baru."}
         onClose={() => setFormOpen(false)}
@@ -323,6 +332,7 @@ function SportTypesContent() {
       {/* Delete confirmation */}
       <Modal
         open={!!deleteTarget}
+        variant="delete"
         title="Hapus Jenis Olahraga"
         onClose={() => setDeleteTarget(null)}
         size="sm"

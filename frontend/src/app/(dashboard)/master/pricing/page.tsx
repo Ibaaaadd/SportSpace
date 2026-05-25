@@ -145,6 +145,12 @@ function PricingContent() {
   const [filterVenue, setFilterVenue] = useState("");
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  function handleRefresh() {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1200);
+  }
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
   const [editTarget, setEditTarget] = useState<PricingRule | null>(null);
@@ -393,6 +399,8 @@ function PricingContent() {
             columns={columns}
             data={filtered}
             emptyMessage="Tidak ada pricing rule ditemukan."
+            loading={loading}
+            onRefresh={handleRefresh}
           />
         </CardContent>
       </Card>
@@ -400,6 +408,7 @@ function PricingContent() {
       {/* Add / Edit modal */}
       <Modal
         open={formOpen}
+        variant={editTarget ? "edit" : "create"}
         title={editTarget ? "Edit Pricing Rule" : "Tambah Pricing Rule"}
         description="Tentukan harga per jam berdasarkan venue dan tipe hari."
         onClose={() => setFormOpen(false)}
@@ -475,6 +484,7 @@ function PricingContent() {
       {/* Delete confirmation */}
       <Modal
         open={!!deleteTarget}
+        variant="delete"
         title="Hapus Pricing Rule"
         onClose={() => setDeleteTarget(null)}
         size="sm"

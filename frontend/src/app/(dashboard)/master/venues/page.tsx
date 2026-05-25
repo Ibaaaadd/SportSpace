@@ -113,7 +113,13 @@ function VenuesContent() {
   const [search, setSearch] = useState("");
   const [filterSport, setFilterSport] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
+
+  function handleRefresh() {
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1200);
+  }
   const [errors, setErrors] = useState<FormErrors>({});
   const [editTarget, setEditTarget] = useState<Venue | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Venue | null>(null);
@@ -342,6 +348,8 @@ function VenuesContent() {
             columns={columns}
             data={filtered}
             emptyMessage="Tidak ada venue ditemukan."
+            loading={loading}
+            onRefresh={handleRefresh}
           />
         </CardContent>
       </Card>
@@ -349,6 +357,7 @@ function VenuesContent() {
       {/* Add / Edit modal */}
       <Modal
         open={formOpen}
+        variant={editTarget ? "edit" : "create"}
         title={editTarget ? "Edit Venue" : "Tambah Venue"}
         description={editTarget ? `Perbarui data ${editTarget.name}.` : "Isi detail venue baru."}
         onClose={() => setFormOpen(false)}
@@ -431,6 +440,7 @@ function VenuesContent() {
       {/* Delete confirmation */}
       <Modal
         open={!!deleteTarget}
+        variant="delete"
         title="Hapus Venue"
         onClose={() => setDeleteTarget(null)}
         size="sm"
