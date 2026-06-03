@@ -4,19 +4,16 @@ import { useState } from "react";
 import Badge from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "../../../../components/ui/Card";
-import DataTable, { type Column } from "../../../../components/ui/DataTable";
-import Input from "../../../../components/ui/Input";
-import Modal from "../../../../components/ui/Modal";
-import Select from "../../../../components/ui/Select";
+import Toggle from "../../../../components/ui/Toggle";
 import { ToastProvider, useToast } from "../../../../components/ui/Toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type PermKey = "view" | "create" | "edit" | "delete";
+
+type RolePerms = Record<PermKey, boolean>;
 
 type Menu = {
   id: string;
@@ -25,17 +22,8 @@ type Menu = {
   href: string;
   parentId: string | null;
   order: number;
-  roles: string[];
-  isActive: boolean;
-};
-
-type FormData = {
-  label: string;
-  icon: string;
-  href: string;
-  parentId: string;
-  order: string;
-  roles: string[];
+  isGroup: boolean;
+  access: Record<string, RolePerms>;
   isActive: boolean;
 };
 
@@ -44,63 +32,259 @@ type View = "list" | "form";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLES_LIST = ["admin", "operator", "kasir", "member"];
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Admin", operator: "Operator", kasir: "Kasir", member: "Member",
+
+const ROLE_META: Record<string, { label: string; variant: "info" | "success" | "warning" | "muted" }> = {
+  admin:    { label: "Admin",    variant: "info" },
+  operator: { label: "Operator", variant: "success" },
+  kasir:    { label: "Kasir",    variant: "warning" },
+  member:   { label: "Member",   variant: "muted" },
 };
 
-const INITIAL_DATA: Menu[] = [
-  { id: "m-1",  label: "Dashboard",      icon: "LayoutDashboard", href: "/dashboard",         parentId: null,   order: 1, roles: ["admin","operator","kasir","member"], isActive: true  },
-  { id: "m-2",  label: "Booking",        icon: "CalendarCheck",   href: "/bookings",           parentId: null,   order: 2, roles: ["admin","operator","kasir"],          isActive: true  },
-  { id: "m-3",  label: "Pembayaran",     icon: "CreditCard",      href: "/payments",           parentId: null,   order: 3, roles: ["admin","operator","kasir"],          isActive: true  },
-  { id: "m-4",  label: "Master Data",    icon: "Database",        href: "#",                   parentId: null,   order: 4, roles: ["admin","operator"],                  isActive: true  },
-  { id: "m-5",  label: "Jenis Olahraga", icon: "Tag",             href: "/master/sport-types", parentId: "m-4",  order: 1, roles: ["admin","operator"],                  isActive: true  },
-  { id: "m-6",  label: "Venue",          icon: "MapPin",          href: "/master/venues",      parentId: "m-4",  order: 2, roles: ["admin","operator"],                  isActive: true  },
-  { id: "m-7",  label: "Harga",          icon: "DollarSign",      href: "/master/pricing",     parentId: "m-4",  order: 3, roles: ["admin","operator"],                  isActive: true  },
-  { id: "m-8",  label: "Laporan",        icon: "BarChart2",       href: "#",                   parentId: null,   order: 5, roles: ["admin","operator"],                  isActive: true  },
-  { id: "m-9",  label: "Okupansi",       icon: "Activity",        href: "/report/occupancy",   parentId: "m-8",  order: 1, roles: ["admin","operator"],                  isActive: true  },
-  { id: "m-10", label: "Pendapatan",     icon: "TrendingUp",      href: "/report/revenue",     parentId: "m-8",  order: 2, roles: ["admin"],                             isActive: true  },
-  { id: "m-11", label: "Setup",          icon: "Settings",        href: "#",                   parentId: null,   order: 6, roles: ["admin"],                             isActive: true  },
-  { id: "m-12", label: "Pengguna",       icon: "Users",           href: "/setup/users",        parentId: "m-11", order: 1, roles: ["admin"],                             isActive: true  },
-  { id: "m-13", label: "Role",           icon: "Shield",          href: "/setup/roles",        parentId: "m-11", order: 2, roles: ["admin"],                             isActive: true  },
-  { id: "m-14", label: "Menu",           icon: "Menu",            href: "/setup/menus",        parentId: "m-11", order: 3, roles: ["admin"],                             isActive: false },
+const PERMS: { key: PermKey; label: string }[] = [
+  { key: "view",   label: "Lihat" },
+  { key: "create", label: "Buat" },
+  { key: "edit",   label: "Edit" },
+  { key: "delete", label: "Hapus" },
 ];
 
-const EMPTY_FORM: FormData = {
-  label: "", icon: "", href: "", parentId: "", order: "1", roles: [], isActive: true,
-};
+function perms(v: boolean, c: boolean, e: boolean, d: boolean): RolePerms {
+  return { view: v, create: c, edit: e, delete: d };
+}
+
+const STATIC_MENUS: Menu[] = [
+  {
+    id: "m-1", label: "Dashboard", icon: "dashboard", href: "/dashboard",
+    parentId: null, order: 1, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, false, false, false),
+      operator: perms(true, false, false, false),
+      kasir: perms(true, false, false, false),
+      member: perms(true, false, false, false),
+    },
+  },
+  {
+    id: "m-2", label: "Booking", icon: "calendar", href: "/bookings",
+    parentId: null, order: 2, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(true, true, true, false),
+      kasir: perms(true, true, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-3", label: "Pembayaran", icon: "payment", href: "/payments",
+    parentId: null, order: 3, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(true, true, true, false),
+      kasir: perms(true, true, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-4", label: "Master Data", icon: "database", href: "#",
+    parentId: null, order: 4, isGroup: true, isActive: true,
+    access: {
+      admin: perms(true, false, false, false),
+      operator: perms(true, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-5", label: "Jenis Olahraga", icon: "tag", href: "/master/sport-types",
+    parentId: "m-4", order: 1, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(true, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-6", label: "Venue", icon: "pin", href: "/master/venues",
+    parentId: "m-4", order: 2, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(true, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-7", label: "Harga", icon: "dollar", href: "/master/pricing",
+    parentId: "m-4", order: 3, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(true, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-8", label: "Laporan", icon: "chart", href: "#",
+    parentId: null, order: 5, isGroup: true, isActive: true,
+    access: {
+      admin: perms(true, false, false, false),
+      operator: perms(true, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-9", label: "Okupansi", icon: "activity", href: "/report/occupancy",
+    parentId: "m-8", order: 1, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, false, false, false),
+      operator: perms(true, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-10", label: "Pendapatan", icon: "trending", href: "/report/revenue",
+    parentId: "m-8", order: 2, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, false, false, false),
+      operator: perms(false, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-11", label: "Setup", icon: "settings", href: "#",
+    parentId: null, order: 6, isGroup: true, isActive: true,
+    access: {
+      admin: perms(true, false, false, false),
+      operator: perms(false, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-12", label: "Pengguna", icon: "users", href: "/setup/users",
+    parentId: "m-11", order: 1, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(false, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-13", label: "Role", icon: "shield", href: "/setup/roles",
+    parentId: "m-11", order: 2, isGroup: false, isActive: true,
+    access: {
+      admin: perms(true, true, true, true),
+      operator: perms(false, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+  {
+    id: "m-14", label: "Menu", icon: "menu", href: "/setup/menus",
+    parentId: "m-11", order: 3, isGroup: false, isActive: false,
+    access: {
+      admin: perms(true, false, true, false),
+      operator: perms(false, false, false, false),
+      kasir: perms(false, false, false, false),
+      member: perms(false, false, false, false),
+    },
+  },
+];
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-function IconEdit() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function IconTrash() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
-}
-
-function IconSearch() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-      <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
-    </svg>
-  );
+function MenuIcon({ name, className = "h-3.5 w-3.5 shrink-0" }: { name: string; className?: string }) {
+  switch (name) {
+    case "dashboard": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+      </svg>
+    );
+    case "calendar": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+      </svg>
+    );
+    case "payment": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
+      </svg>
+    );
+    case "database": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+      </svg>
+    );
+    case "tag": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+      </svg>
+    );
+    case "pin": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+      </svg>
+    );
+    case "dollar": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    );
+    case "chart": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+    );
+    case "activity": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    );
+    case "trending": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+      </svg>
+    );
+    case "settings": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    );
+    case "users": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    );
+    case "shield": return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    );
+    default: return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    );
+  }
 }
 
 function IconChevronRight() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <path d="M9 18l6-6-6-6" />
+    </svg>
+  );
+}
+
+function IconChevronDown() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
@@ -113,56 +297,160 @@ function IconBack() {
   );
 }
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-
-function Toggle({ checked, onChange, size = "md" }: { checked: boolean; onChange: () => void; size?: "sm" | "md" }) {
-  const track = size === "sm" ? "h-4 w-7" : "h-5 w-9";
-  const thumb = size === "sm" ? "h-3 w-3" : "h-4 w-4";
-  const translate = size === "sm" ? "translate-x-3" : "translate-x-4";
+function IconEdit() {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      className={`relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${track} ${
-        checked ? "bg-secondary" : "bg-surface-2 border border-border"
-      }`}
-    >
-      <span className={`pointer-events-none inline-block transform rounded-full bg-white shadow transition-transform ${thumb} ${checked ? translate : "translate-x-0"}`} />
-    </button>
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+// ─── Sidebar tree (list view) ─────────────────────────────────────────────────
+
+function SidebarTree({
+  items,
+  onEdit,
+}: {
+  items: Menu[];
+  onEdit: (menu: Menu) => void;
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(["m-4", "m-8", "m-11"]));
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const roots = items.filter((m) => !m.parentId).sort((a, b) => a.order - b.order);
+
+  function countViewable(menu: Menu) {
+    return ROLES_LIST.filter((r) => menu.access[r]?.view).length;
+  }
+
+  function renderItem(item: Menu, depth = 0) {
+    const children = items.filter((m) => m.parentId === item.id).sort((a, b) => a.order - b.order);
+    const hasChildren = children.length > 0;
+    const isExpanded = expanded.has(item.id);
+
+    return (
+      <div key={item.id}>
+        <div
+          className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all hover:bg-surface-2/60 ${
+            depth > 0 ? "pl-8" : ""
+          }`}
+        >
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.isActive ? "bg-green-400" : "bg-border"}`} />
+          <MenuIcon name={item.icon} />
+          <span className="flex-1 truncate text-sm text-text-primary">{item.label}</span>
+          <span className="text-[10px] text-text-muted/50">{countViewable(item)} role</span>
+
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="invisible flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border text-text-muted transition hover:border-secondary hover:text-secondary group-hover:visible"
+            aria-label={`Edit akses ${item.label}`}
+          >
+            <IconEdit />
+          </button>
+
+          {hasChildren && (
+            <button
+              type="button"
+              onClick={() => toggleExpand(item.id)}
+              className="flex h-5 w-5 shrink-0 items-center justify-center text-text-muted/60 hover:text-text-muted"
+            >
+              {isExpanded ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+          )}
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="mt-0.5 mb-0.5">
+            {children.map((c) => renderItem(c, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5 p-2">
+      {roots.map((r) => renderItem(r))}
+    </div>
   );
 }
 
 // ─── Form page ────────────────────────────────────────────────────────────────
 
 function MenuFormPage({
-  editTarget,
-  form,
-  setForm,
-  errors,
-  parentMenus,
+  menu,
+  allMenus,
   onSave,
   onBack,
 }: {
-  editTarget: Menu | null;
-  form: FormData;
-  setForm: React.Dispatch<React.SetStateAction<FormData>>;
-  errors: Partial<Pick<FormData, "label" | "href">>;
-  parentMenus: Menu[];
-  onSave: () => void;
+  menu: Menu;
+  allMenus: Menu[];
+  onSave: (id: string, access: Record<string, RolePerms>, isActive: boolean) => void;
   onBack: () => void;
 }) {
-  function toggleRole(role: string) {
-    setForm((f) => ({
-      ...f,
-      roles: f.roles.includes(role) ? f.roles.filter((r) => r !== role) : [...f.roles, role],
+  const [access, setAccess] = useState<Record<string, RolePerms>>(
+    () => JSON.parse(JSON.stringify(menu.access)) as Record<string, RolePerms>
+  );
+  const [isActive, setIsActive] = useState(menu.isActive);
+
+  const parent = allMenus.find((m) => m.id === menu.parentId);
+
+  const visiblePerms = menu.isGroup ? PERMS.filter((p) => p.key === "view") : PERMS;
+
+  function toggle(role: string, key: PermKey) {
+    setAccess((prev) => {
+      const next = { ...prev, [role]: { ...prev[role], [key]: !prev[role][key] } };
+      if (key === "view" && !next[role].view) {
+        next[role] = { view: false, create: false, edit: false, delete: false };
+      }
+      if (key !== "view" && next[role][key]) {
+        next[role] = { ...next[role], view: true };
+      }
+      return next;
+    });
+  }
+
+  function toggleAllForRole(role: string, checked: boolean) {
+    setAccess((prev) => ({
+      ...prev,
+      [role]: checked
+        ? { view: true, create: !menu.isGroup, edit: !menu.isGroup, delete: !menu.isGroup }
+        : { view: false, create: false, edit: false, delete: false },
     }));
   }
 
+  function toggleAllForPerm(key: PermKey, checked: boolean) {
+    setAccess((prev) => {
+      const next = { ...prev };
+      for (const role of ROLES_LIST) {
+        next[role] = { ...next[role], [key]: checked };
+        if (checked && key !== "view") next[role].view = true;
+        if (!checked && key === "view") {
+          next[role] = { view: false, create: false, edit: false, delete: false };
+        }
+      }
+      return next;
+    });
+  }
+
+  function handleSave() {
+    onSave(menu.id, access, isActive);
+  }
+
+  const totalActive = ROLES_LIST.filter((r) => access[r]?.view).length;
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Breadcrumb header */}
+      {/* Header */}
       <div className="flex flex-col gap-1">
         <button
           type="button"
@@ -176,178 +464,184 @@ function MenuFormPage({
           <div>
             <p className="text-xs uppercase tracking-widest text-text-muted">Setup / Menu</p>
             <h1 className="text-xl font-bold text-text-primary">
-              {editTarget ? `Edit Menu — ${editTarget.label}` : "Tambah Menu Baru"}
+              Akses Menu — {menu.label}
             </h1>
             <p className="mt-0.5 text-sm text-text-muted">
-              {editTarget ? "Perbarui konfigurasi item navigasi." : "Tambah item navigasi baru ke sidebar."}
+              Atur operasi yang diizinkan per role untuk menu ini.
             </p>
           </div>
           <div className="flex gap-2 sm:shrink-0">
             <Button variant="ghost" size="sm" onClick={onBack}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={onSave}>
-              {editTarget ? "Simpan Perubahan" : "Tambah Menu"}
-            </Button>
+            <Button variant="primary" size="sm" onClick={handleSave}>Simpan Perubahan</Button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Left — main fields */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
+        {/* Left — menu info + status */}
         <div className="flex flex-col gap-4">
-          {/* Basic info */}
           <Card>
             <CardHeader>
-              <CardTitle>Informasi Dasar</CardTitle>
-              <CardDescription>Label, icon, dan path yang ditampilkan di navigasi.</CardDescription>
+              <CardTitle>Info Menu</CardTitle>
+              <CardDescription>Detail menu (tidak dapat diubah).</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <Input
-                label="Label Menu"
-                placeholder="cth. Dashboard, Booking, Laporan..."
-                value={form.label}
-                onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                error={errors.label}
-              />
-              <Input
-                label="Path / Href"
-                placeholder="cth. /dashboard, /master/venues, #"
-                value={form.href}
-                onChange={(e) => setForm((f) => ({ ...f, href: e.target.value }))}
-                error={errors.href}
-                hint='Gunakan "#" jika menu ini hanya sebagai grup (tanpa halaman tujuan).'
-              />
-              <Input
-                label="Nama Icon"
-                placeholder="cth. LayoutDashboard, CalendarCheck, Users..."
-                value={form.icon}
-                onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
-                hint="Gunakan nama icon dari lucide-react."
-              />
-            </CardContent>
-          </Card>
-
-          {/* Navigation structure */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Struktur Navigasi</CardTitle>
-              <CardDescription>Tentukan posisi menu dalam hierarki sidebar.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  label="Parent Menu"
-                  value={form.parentId}
-                  onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                  options={[
-                    { value: "", label: "— Root (tanpa parent) —" },
-                    ...parentMenus.map((m) => ({ value: m.id, label: m.label })),
-                  ]}
-                />
-                <Input
-                  label="Urutan Tampil"
-                  type="number"
-                  placeholder="1"
-                  value={form.order}
-                  onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))}
-                  hint="Urutan relatif di antara menu satu level."
-                />
-              </div>
-
-              {/* Preview */}
-              {form.label && (
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-ink-2/30 px-4 py-3">
-                  <span className="text-xs text-text-muted">Preview:</span>
-                  {form.parentId && (
-                    <>
-                      <span className="text-xs text-text-muted">
-                        {parentMenus.find((m) => m.id === form.parentId)?.label ?? "Parent"}
-                      </span>
-                      <IconChevronRight />
-                    </>
-                  )}
-                  <span className="text-xs font-medium text-text-primary">{form.label || "—"}</span>
-                  {form.href && form.href !== "#" && (
-                    <span className="ml-auto font-mono text-xs text-text-muted/60">{form.href}</span>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text-muted">
+                  <MenuIcon name={menu.icon} className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-text-primary">{menu.label}</p>
+                  {parent && (
+                    <p className="text-xs text-text-muted">dalam {parent.label}</p>
                   )}
                 </div>
+              </div>
+              <div className="rounded-lg border border-border bg-ink-2/40 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-widest text-text-muted">Path</p>
+                <p className="mt-0.5 font-mono text-xs text-text-primary">{menu.href}</p>
+              </div>
+              {menu.isGroup && (
+                <p className="rounded-lg border border-yellow-400/20 bg-yellow-400/5 px-3 py-2 text-xs text-yellow-300">
+                  Menu grup — hanya visibilitas yang dapat diatur (tidak ada CRUD).
+                </p>
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Right — visibility & status */}
-        <div className="flex flex-col gap-4">
-          {/* Role visibility */}
+          {/* Summary */}
+          <div className="rounded-xl border border-secondary/20 bg-secondary/5 px-4 py-3.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-secondary">Ringkasan</p>
+            <p className="mt-2 text-2xl font-bold text-text-primary">{totalActive}</p>
+            <p className="text-xs text-text-muted">dari {ROLES_LIST.length} role dapat mengakses menu ini</p>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2/60">
+              <div
+                className="h-full rounded-full bg-secondary transition-all duration-500"
+                style={{ width: `${(totalActive / ROLES_LIST.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Active toggle */}
           <Card>
             <CardHeader>
-              <CardTitle>Visibilitas Role</CardTitle>
-              <CardDescription>Menu hanya tampil untuk role yang dipilih.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-2">
-                {ROLES_LIST.map((r) => {
-                  const checked = form.roles.includes(r);
-                  return (
-                    <label
-                      key={r}
-                      className={`flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-2.5 transition select-none ${
-                        checked
-                          ? "border-secondary/40 bg-secondary/8 text-secondary"
-                          : "border-border text-text-muted hover:border-border/60 hover:bg-surface-2/40"
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{ROLE_LABEL[r]}</span>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleRole(r)}
-                        className="h-4 w-4 rounded border-border accent-secondary"
-                      />
-                    </label>
-                  );
-                })}
-                {form.roles.length === 0 && (
-                  <p className="mt-1 text-xs text-yellow-400">Pilih minimal satu role agar menu tampil.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Status</CardTitle>
-              <CardDescription>Menu hanya muncul di navigasi jika aktif.</CardDescription>
+              <CardTitle>Status Menu</CardTitle>
+              <CardDescription>Menu nonaktif tidak muncul di sidebar.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    {form.isActive ? "Aktif" : "Nonaktif"}
+                  <p className={`text-sm font-medium ${isActive ? "text-green-400" : "text-text-muted"}`}>
+                    {isActive ? "Aktif" : "Nonaktif"}
                   </p>
                   <p className="text-xs text-text-muted">
-                    {form.isActive ? "Menu tampil di sidebar." : "Menu disembunyikan dari sidebar."}
+                    {isActive ? "Tampil di navigasi." : "Disembunyikan dari navigasi."}
                   </p>
                 </div>
-                <Toggle checked={form.isActive} onChange={() => setForm((f) => ({ ...f, isActive: !f.isActive }))} />
+                <Toggle checked={isActive} onCheckedChange={setIsActive} label="Status menu" />
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Right — permission matrix */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Matriks Izin Akses</CardTitle>
+            <CardDescription>
+              {menu.isGroup
+                ? "Centang role yang dapat melihat grup menu ini di sidebar."
+                : "Tentukan operasi yang diizinkan per role untuk menu ini."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="pb-3 text-left text-xs font-semibold uppercase tracking-widest text-text-muted">
+                      Role
+                    </th>
+                    {visiblePerms.map((p) => {
+                      const allChecked = ROLES_LIST.every((r) => access[r]?.[p.key]);
+                      return (
+                        <th key={p.key} className="pb-3 text-center">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+                              {p.label}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              onChange={(e) => toggleAllForPerm(p.key, e.target.checked)}
+                              className="h-3.5 w-3.5 rounded border-border accent-secondary"
+                              title={`Toggle semua ${p.label}`}
+                            />
+                          </div>
+                        </th>
+                      );
+                    })}
+                    <th className="pb-3 text-center text-xs font-semibold uppercase tracking-widest text-text-muted">
+                      Semua
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {ROLES_LIST.map((role) => {
+                    const meta = ROLE_META[role];
+                    const rowPerms = access[role] ?? { view: false, create: false, edit: false, delete: false };
+                    const allRowChecked = visiblePerms.every((p) => rowPerms[p.key]);
+                    return (
+                      <tr key={role} className="group transition-colors hover:bg-surface-2/30">
+                        <td className="py-3 pr-4">
+                          <Badge variant={meta.variant}>{meta.label}</Badge>
+                        </td>
+                        {visiblePerms.map((p) => {
+                          const isDisabled = p.key !== "view" && !rowPerms.view;
+                          return (
+                            <td key={p.key} className="py-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={rowPerms[p.key]}
+                                disabled={isDisabled}
+                                onChange={() => toggle(role, p.key)}
+                                className="h-4 w-4 rounded border-border accent-secondary disabled:cursor-not-allowed disabled:opacity-30"
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={allRowChecked}
+                            onChange={(e) => toggleAllForRole(role, e.target.checked)}
+                            className="h-4 w-4 rounded border-border accent-secondary"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {!menu.isGroup && (
+              <p className="mt-4 text-xs text-text-muted/60">
+                Kolom Buat / Edit / Hapus otomatis memerlukan Lihat. Jika Lihat dinonaktifkan, semua izin ikut nonaktif.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Bottom save bar */}
       <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-5 py-3.5">
         <p className="text-sm text-text-muted">
-          {form.roles.length > 0
-            ? `Visible untuk: ${form.roles.map((r) => ROLE_LABEL[r]).join(", ")}`
-            : "Belum ada role yang dipilih"}
+          {totalActive} role dapat mengakses {menu.label}
         </p>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={onBack}>Batal</Button>
-          <Button variant="primary" size="sm" onClick={onSave}>
-            {editTarget ? "Simpan Perubahan" : "Tambah Menu"}
-          </Button>
+          <Button variant="primary" size="sm" onClick={handleSave}>Simpan Perubahan</Button>
         </div>
       </div>
     </div>
@@ -358,108 +652,28 @@ function MenuFormPage({
 
 function MenusContent() {
   const { push } = useToast();
-  const [view, setView]   = useState<View>("list");
-  const [items, setItems] = useState<Menu[]>(INITIAL_DATA);
-  const [search, setSearch]       = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [form, setForm]           = useState<FormData>(EMPTY_FORM);
-  const [errors, setErrors]       = useState<Partial<Pick<FormData, "label" | "href">>>({});
-  const [editTarget, setEditTarget]   = useState<Menu | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Menu | null>(null);
+  const [view, setView] = useState<View>("list");
+  const [items, setItems] = useState<Menu[]>(STATIC_MENUS);
+  const [editTarget, setEditTarget] = useState<Menu | null>(null);
 
-  const parentMenus = items.filter((i) => i.parentId === null);
-
-  function handleRefresh() {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1200);
-  }
-
-  const filtered = items.filter(
-    (i) =>
-      i.label.toLowerCase().includes(search.toLowerCase()) ||
-      i.href.toLowerCase().includes(search.toLowerCase()) ||
-      i.icon.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function getParentLabel(parentId: string | null) {
-    if (!parentId) return null;
-    return items.find((i) => i.id === parentId)?.label ?? parentId;
-  }
-
-  function openAdd() {
-    setEditTarget(null);
-    setForm(EMPTY_FORM);
-    setErrors({});
+  function openEdit(menu: Menu) {
+    setEditTarget(menu);
     setView("form");
   }
 
-  function openEdit(item: Menu) {
-    setEditTarget(item);
-    setForm({
-      label: item.label,
-      icon: item.icon,
-      href: item.href,
-      parentId: item.parentId ?? "",
-      order: String(item.order),
-      roles: [...item.roles],
-      isActive: item.isActive,
-    });
-    setErrors({});
-    setView("form");
-  }
-
-  function validate() {
-    const e: Partial<Pick<FormData, "label" | "href">> = {};
-    if (!form.label.trim()) e.label = "Label menu wajib diisi";
-    if (!form.href.trim())  e.href  = "Path/href wajib diisi";
-    return e;
-  }
-
-  function handleSave() {
-    const e = validate();
-    if (Object.keys(e).length > 0) { setErrors(e); return; }
-
-    const parsed: Menu = {
-      id: editTarget?.id ?? `m-${Date.now()}`,
-      label: form.label.trim(),
-      icon: form.icon.trim(),
-      href: form.href.trim(),
-      parentId: form.parentId || null,
-      order: parseInt(form.order, 10) || 1,
-      roles: form.roles,
-      isActive: form.isActive,
-    };
-
-    if (editTarget) {
-      setItems((prev) => prev.map((i) => (i.id === editTarget.id ? parsed : i)));
-      push({ title: "Menu diperbarui", description: `${form.label} berhasil diupdate.`, variant: "success" });
-    } else {
-      setItems((prev) => [...prev, parsed]);
-      push({ title: "Menu ditambahkan", description: `${form.label} berhasil ditambahkan.`, variant: "success" });
-    }
+  function handleSave(id: string, access: Record<string, RolePerms>, isActive: boolean) {
+    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, access, isActive } : m)));
+    const menu = items.find((m) => m.id === id);
+    push({ title: "Akses disimpan", description: `Pengaturan "${menu?.label}" berhasil diperbarui.`, variant: "success" });
     setView("list");
   }
 
-  function handleDelete() {
-    if (!deleteTarget) return;
-    setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id && i.parentId !== deleteTarget.id));
-    push({ title: "Menu dihapus", description: `${deleteTarget.label} telah dihapus.`, variant: "success" });
-    setDeleteTarget(null);
-  }
-
-  function toggleActive(id: string) {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isActive: !i.isActive } : i)));
-  }
-
   // ── Form view ──
-  if (view === "form") {
+  if (view === "form" && editTarget) {
     return (
       <MenuFormPage
-        editTarget={editTarget}
-        form={form}
-        setForm={setForm}
-        errors={errors}
-        parentMenus={parentMenus}
+        menu={editTarget}
+        allMenus={items}
         onSave={handleSave}
         onBack={() => setView("list")}
       />
@@ -467,173 +681,68 @@ function MenusContent() {
   }
 
   // ── List view ──
-  const columns: Column<Menu>[] = [
-    {
-      key: "label",
-      header: "Menu",
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          {row.parentId && <span className="flex items-center text-text-muted"><IconChevronRight /></span>}
-          <div>
-            <p className={`font-medium ${row.parentId ? "text-sm text-text-muted" : "text-text-primary"}`}>
-              {row.label}
-            </p>
-            <p className="text-xs text-text-muted/60">{row.href}</p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "icon",
-      header: "Icon",
-      render: (row) => (
-        <span className="rounded-lg border border-border bg-ink-2/60 px-2 py-0.5 font-mono text-xs text-text-muted">
-          {row.icon || "—"}
-        </span>
-      ),
-    },
-    {
-      key: "parentId",
-      header: "Parent",
-      render: (row) => {
-        const label = getParentLabel(row.parentId);
-        return label
-          ? <Badge variant="muted">{label}</Badge>
-          : <span className="text-xs text-text-muted/40">Root</span>;
-      },
-    },
-    {
-      key: "roles",
-      header: "Role",
-      render: (row) => (
-        <div className="flex flex-wrap gap-1">
-          {row.roles.map((r) => (
-            <Badge key={r} variant="info">{ROLE_LABEL[r] ?? r}</Badge>
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: "order",
-      header: "Urutan",
-      align: "center",
-      render: (row) => <span className="text-sm text-text-muted">{row.order}</span>,
-    },
-    {
-      key: "isActive",
-      header: "Aktif",
-      align: "center",
-      render: (row) => (
-        <Toggle checked={row.isActive} onChange={() => toggleActive(row.id)} size="sm" />
-      ),
-    },
-    {
-      key: "id",
-      header: "",
-      align: "right",
-      render: (row) => (
-        <div className="flex items-center justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => openEdit(row)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary"
-            aria-label="Edit"
-          >
-            <IconEdit />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteTarget(row)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-red-500/60 hover:text-red-400"
-            aria-label="Hapus"
-          >
-            <IconTrash />
-          </button>
-        </div>
-      ),
-    },
-  ];
+  const totalActive = items.filter((i) => i.isActive).length;
+  const totalRestricted = items.filter((i) => ROLES_LIST.some((r) => !i.access[r]?.view)).length;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-text-muted">Setup</p>
-          <h1 className="text-xl font-bold text-text-primary">Manajemen Menu</h1>
-          <p className="mt-0.5 text-sm text-text-muted">Konfigurasi navigasi dan visibilitas menu per role.</p>
-        </div>
-        <Button variant="primary" size="sm" onClick={openAdd}>+ Tambah Menu</Button>
+      <div>
+        <p className="text-xs uppercase tracking-widest text-text-muted">Setup</p>
+        <h1 className="text-xl font-bold text-text-primary">Manajemen Akses Menu</h1>
+        <p className="mt-0.5 text-sm text-text-muted">
+          Atur visibilitas dan izin CRUD setiap menu per role pengguna.
+        </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total Menu", value: items.length },
-          { label: "Menu Utama", value: items.filter((i) => !i.parentId).length },
-          { label: "Sub Menu",   value: items.filter((i) => !!i.parentId).length },
-          { label: "Menu Aktif", value: items.filter((i) => i.isActive).length },
+          { label: "Total Menu",     value: items.length,                color: "text-text-primary" },
+          { label: "Menu Aktif",     value: totalActive,                 color: "text-green-400" },
+          { label: "Menu Nonaktif",  value: items.length - totalActive,  color: "text-text-muted" },
+          { label: "Akses Dibatasi", value: totalRestricted,             color: "text-yellow-400" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border border-border bg-surface/60 px-4 py-3">
             <p className="text-xs text-text-muted">{s.label}</p>
-            <p className="mt-0.5 text-xl font-bold text-text-primary">{s.value}</p>
+            <p className={`mt-0.5 text-2xl font-bold ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Table */}
+      {/* Sidebar tree */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Daftar Menu</CardTitle>
-              <CardDescription>{filtered.length} dari {items.length} menu</CardDescription>
-            </div>
-            <div className="w-full max-w-xs">
-              <Input
-                placeholder="Cari label, href, atau icon..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                leftIcon={<IconSearch />}
-              />
+              <CardTitle>Navigasi Sidebar</CardTitle>
+              <CardDescription>
+                Hover pada menu lalu klik ikon edit untuk mengatur akses dan izin CRUD-nya.
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={columns}
-            data={filtered}
-            emptyMessage="Tidak ada menu ditemukan."
-            loading={loading}
-            onRefresh={handleRefresh}
-          />
+        <CardContent className="p-0 pb-2">
+          <SidebarTree items={items} onEdit={openEdit} />
         </CardContent>
       </Card>
 
-      {/* Delete modal */}
-      <Modal
-        open={!!deleteTarget}
-        variant="delete"
-        title="Hapus Menu"
-        onClose={() => setDeleteTarget(null)}
-        size="sm"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Batal</Button>
-            <Button variant="danger" size="sm" onClick={handleDelete}>Hapus</Button>
-          </div>
-        }
-      >
-        <p className="text-sm text-text-muted">
-          Yakin ingin menghapus menu{" "}
-          <span className="font-semibold text-text-primary">{deleteTarget?.label}</span>?
-        </p>
-        {deleteTarget && !deleteTarget.parentId && items.some((i) => i.parentId === deleteTarget.id) && (
-          <p className="mt-3 rounded-xl border border-yellow-400/30 bg-yellow-400/5 px-3 py-2.5 text-xs text-yellow-300">
-            Perhatian: menu ini memiliki sub-menu yang juga akan ikut terhapus.
-          </p>
-        )}
-      </Modal>
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-surface/40 px-4 py-3">
+        <p className="text-xs font-semibold text-text-muted">Keterangan:</p>
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+          <span className="text-xs text-text-muted">Menu aktif</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-border" />
+          <span className="text-xs text-text-muted">Menu nonaktif</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-muted">N role</span>
+          <span className="text-xs text-text-muted/60">= jumlah role yang bisa lihat menu</span>
+        </div>
+      </div>
     </div>
   );
 }
