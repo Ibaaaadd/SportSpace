@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Align = "left" | "center" | "right";
 
@@ -29,7 +30,6 @@ const alignStyles: Record<Align, string> = {
   right: "text-right",
 };
 
-// Fixed skeleton widths to avoid hydration issues
 const SKELETON_WIDTHS = ["72%", "55%", "80%", "60%", "68%"];
 
 function getPageNumbers(current: number, total: number): (number | "…")[] {
@@ -37,40 +37,6 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
   if (current >= total - 3) return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
   return [1, "…", current - 1, current, current + 1, "…", total];
-}
-
-function IconRefresh({ spinning }: { spinning: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-3.5 w-3.5 transition-transform duration-700 ${spinning ? "animate-spin" : ""}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M23 4v6h-6" />
-      <path d="M1 20v-6h6" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-    </svg>
-  );
-}
-
-function IconChevronLeft() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
-}
-
-function IconChevronRight() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
 }
 
 export default function DataTable<T extends Record<string, unknown>>({
@@ -85,7 +51,6 @@ export default function DataTable<T extends Record<string, unknown>>({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 
-  // Reset to page 1 whenever data changes (filter/search applied)
   useEffect(() => {
     setPage(1);
   }, [data]);
@@ -103,16 +68,15 @@ export default function DataTable<T extends Record<string, unknown>>({
   const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
-    <div className="flex flex-col gap-0 overflow-hidden rounded-xl border border-border">
-      {/* Table */}
+    <div className="flex flex-col overflow-hidden rounded-xl border border-border/70">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border bg-ink-2">
+            <tr className="border-b border-border/60 bg-ink-2/80">
               {columns.map((col) => (
                 <th
                   key={String(col.key)}
-                  className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-muted ${alignStyles[col.align ?? "left"]} ${col.className ?? ""}`}
+                  className={`px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted/70 ${alignStyles[col.align ?? "left"]} ${col.className ?? ""}`}
                 >
                   {col.header}
                 </th>
@@ -121,13 +85,12 @@ export default function DataTable<T extends Record<string, unknown>>({
           </thead>
           <tbody>
             {loading ? (
-              // Skeleton rows
               SKELETON_WIDTHS.map((_, rowIdx) => (
-                <tr key={rowIdx} className="border-b border-border/50 last:border-b-0">
+                <tr key={rowIdx} className="border-b border-border/40 last:border-b-0">
                   {columns.map((col, colIdx) => (
-                    <td key={String(col.key)} className={`px-4 py-3 ${alignStyles[col.align ?? "left"]}`}>
+                    <td key={String(col.key)} className={`px-4 py-3.5 ${alignStyles[col.align ?? "left"]}`}>
                       <div
-                        className="h-4 animate-pulse rounded-lg bg-ink-2"
+                        className="h-3.5 animate-pulse rounded-lg bg-surface-2/80"
                         style={{ width: colIdx === columns.length - 1 ? "48px" : SKELETON_WIDTHS[rowIdx % SKELETON_WIDTHS.length] }}
                       />
                     </td>
@@ -136,7 +99,7 @@ export default function DataTable<T extends Record<string, unknown>>({
               ))
             ) : paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-text-muted">
+                <td colSpan={columns.length} className="px-4 py-14 text-center text-sm text-text-muted">
                   {data.length === 0 ? emptyMessage : "Tidak ada data yang cocok dengan filter."}
                 </td>
               </tr>
@@ -144,14 +107,14 @@ export default function DataTable<T extends Record<string, unknown>>({
               paginatedData.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
-                  className={`border-b border-border/50 last:border-b-0 transition-colors hover:bg-ink-2/60 ${
-                    striped && rowIndex % 2 === 1 ? "bg-ink-2/20" : ""
+                  className={`border-b border-border/40 last:border-b-0 transition-colors hover:bg-surface-2/40 ${
+                    striped && rowIndex % 2 === 1 ? "bg-ink-2/25" : ""
                   }`}
                 >
                   {columns.map((col) => (
                     <td
                       key={String(col.key)}
-                      className={`px-4 py-3 text-sm text-text-primary ${alignStyles[col.align ?? "left"]} ${col.className ?? ""}`}
+                      className={`px-4 py-3.5 text-sm text-text-primary ${alignStyles[col.align ?? "left"]} ${col.className ?? ""}`}
                     >
                       {col.render
                         ? col.render(row)
@@ -166,8 +129,7 @@ export default function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {/* Pagination bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-ink-2/40 px-4 py-2.5">
-        {/* Info */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-ink-2/50 px-4 py-2.5">
         <p className="text-xs text-text-muted">
           {loading ? (
             <span className="animate-pulse">Memuat data...</span>
@@ -175,24 +137,26 @@ export default function DataTable<T extends Record<string, unknown>>({
             "Tidak ada data"
           ) : (
             <>
-              Menampilkan <span className="font-medium text-text-primary">{startRow}–{endRow}</span> dari{" "}
-              <span className="font-medium text-text-primary">{data.length}</span> data
+              Menampilkan{" "}
+              <span className="font-medium text-text-primary">{startRow}–{endRow}</span>
+              {" "}dari{" "}
+              <span className="font-medium text-text-primary">{data.length}</span>
+              {" "}data
             </>
           )}
         </p>
 
-        <div className="flex items-center gap-2">
-          {/* Page navigation */}
+        <div className="flex items-center gap-1.5">
           {totalPages > 1 && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1 || loading}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary disabled:pointer-events-none disabled:opacity-30"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 text-text-muted transition hover:border-secondary/60 hover:text-secondary disabled:pointer-events-none disabled:opacity-30"
                 aria-label="Halaman sebelumnya"
               >
-                <IconChevronLeft />
+                <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
               </button>
 
               {pageNumbers.map((p, i) =>
@@ -204,10 +168,10 @@ export default function DataTable<T extends Record<string, unknown>>({
                     type="button"
                     onClick={() => setPage(p as number)}
                     disabled={loading}
-                    className={`inline-flex h-7 min-w-[28px] items-center justify-center rounded-lg border px-2 text-xs font-medium transition disabled:pointer-events-none ${
+                    className={`inline-flex h-7 min-w-7 items-center justify-center rounded-lg border px-2 text-xs font-medium transition disabled:pointer-events-none ${
                       page === p
-                        ? "border-secondary bg-secondary/15 text-secondary"
-                        : "border-border text-text-muted hover:border-secondary hover:text-secondary"
+                        ? "border-primary/50 bg-primary/12 text-primary"
+                        : "border-border/70 text-text-muted hover:border-secondary/60 hover:text-secondary"
                     }`}
                   >
                     {p}
@@ -219,20 +183,19 @@ export default function DataTable<T extends Record<string, unknown>>({
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages || loading}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary disabled:pointer-events-none disabled:opacity-30"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 text-text-muted transition hover:border-secondary/60 hover:text-secondary disabled:pointer-events-none disabled:opacity-30"
                 aria-label="Halaman berikutnya"
               >
-                <IconChevronRight />
+                <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
               </button>
             </div>
           )}
 
-          {/* Page size */}
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
             disabled={loading}
-            className="h-7 appearance-none rounded-lg border border-border bg-ink-2 px-2 pr-6 text-xs text-text-muted outline-none transition hover:border-secondary focus:border-secondary disabled:opacity-40"
+            className="h-7 appearance-none rounded-lg border border-border/70 bg-ink-2 px-2 pr-6 text-xs text-text-muted outline-none transition hover:border-secondary/60 focus:border-secondary/60 disabled:opacity-40"
             style={{ backgroundImage: "none" }}
             aria-label="Jumlah baris per halaman"
           >
@@ -243,17 +206,16 @@ export default function DataTable<T extends Record<string, unknown>>({
             ))}
           </select>
 
-          {/* Refresh button */}
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
               disabled={loading}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border/70 text-text-muted transition hover:border-secondary/60 hover:text-secondary disabled:pointer-events-none disabled:opacity-40"
               aria-label="Refresh data"
               title="Refresh data"
             >
-              <IconRefresh spinning={loading} />
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
             </button>
           )}
         </div>

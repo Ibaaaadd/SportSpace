@@ -11,7 +11,7 @@ type CardSectionProps = HTMLAttributes<HTMLDivElement> & {
 export function Card({ className, children, ...props }: CardProps) {
   return (
     <div
-      className={`rounded-2xl border border-border bg-surface/80 shadow-[0_0_24px_rgba(0,0,0,0.25)] ${
+      className={`rounded-2xl border border-border/70 bg-surface/60 shadow-[0_2px_20px_rgba(0,0,0,0.18)] ${
         className ?? ""
       }`}
       {...props}
@@ -23,7 +23,7 @@ export function Card({ className, children, ...props }: CardProps) {
 
 export function CardHeader({ className, children, ...props }: CardSectionProps) {
   return (
-    <div className={`px-6 pb-0 pt-6 ${className ?? ""}`} {...props}>
+    <div className={`px-6 pb-0 pt-5 ${className ?? ""}`} {...props}>
       {children}
     </div>
   );
@@ -31,7 +31,7 @@ export function CardHeader({ className, children, ...props }: CardSectionProps) 
 
 export function CardTitle({ className, children, ...props }: CardSectionProps) {
   return (
-    <h3 className={`text-lg font-semibold ${className ?? ""}`} {...props}>
+    <h3 className={`text-base font-semibold tracking-tight text-text-primary ${className ?? ""}`} {...props}>
       {children}
     </h3>
   );
@@ -43,7 +43,7 @@ export function CardDescription({
   ...props
 }: CardSectionProps) {
   return (
-    <p className={`mt-2 text-sm text-text-muted ${className ?? ""}`} {...props}>
+    <p className={`mt-1 text-sm text-text-muted ${className ?? ""}`} {...props}>
       {children}
     </p>
   );
@@ -60,7 +60,7 @@ export function CardContent({ className, children, ...props }: CardSectionProps)
 export function CardFooter({ className, children, ...props }: CardSectionProps) {
   return (
     <div
-      className={`flex items-center justify-between border-t border-border px-6 py-4 ${
+      className={`flex items-center justify-between border-t border-border/60 px-6 py-4 ${
         className ?? ""
       }`}
       {...props}

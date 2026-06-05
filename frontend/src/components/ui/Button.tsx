@@ -12,25 +12,25 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const baseStyles =
-  "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:pointer-events-none disabled:opacity-40";
+  "inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:pointer-events-none disabled:opacity-40 cursor-pointer";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-linear-to-r from-primary via-secondary to-accent text-ink shadow-[0_0_20px_rgba(27,111,255,0.3)] hover:brightness-110 hover:shadow-[0_0_28px_rgba(27,111,255,0.45)]",
+    "bg-linear-to-r from-primary to-secondary text-white shadow-[0_2px_16px_rgba(27,111,255,0.28)] hover:shadow-[0_2px_24px_rgba(27,111,255,0.42)] hover:brightness-110 active:brightness-95",
   secondary:
-    "bg-surface-2 text-text-primary border border-border hover:border-secondary/60 hover:bg-surface",
+    "bg-surface-2 text-text-primary border border-border/80 hover:border-secondary/50 hover:bg-surface hover:text-text-primary",
   outline:
-    "border border-border text-text-primary hover:border-secondary/60 hover:bg-surface-2/40",
+    "border border-border/80 text-text-primary hover:border-primary/50 hover:bg-primary/6 hover:text-primary",
   ghost:
     "text-text-muted hover:bg-surface-2/60 hover:text-text-primary",
   danger:
-    "border border-red-500/50 text-red-300 hover:border-red-400 hover:bg-red-500/10 hover:text-red-200",
+    "border border-red-500/40 text-red-300 hover:border-red-400/70 hover:bg-red-500/10 hover:text-red-200",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
   sm: "h-8 px-3.5 text-xs",
   md: "h-9 px-4 text-sm",
-  lg: "h-11 px-6 text-sm",
+  lg: "h-10 px-5 text-sm",
 };
 
 function Spinner() {

@@ -30,7 +30,7 @@ export default function Select({
       {label && (
         <label
           htmlFor={selectId}
-          className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted"
+          className="text-[11px] font-semibold uppercase tracking-widest text-text-muted"
         >
           {label}
         </label>
@@ -38,8 +38,8 @@ export default function Select({
       <div className="relative">
         <select
           id={selectId}
-          className={`w-full appearance-none rounded-xl border bg-surface/60 px-3.5 py-2.5 pr-9 text-sm text-text-primary outline-none transition-all focus:border-secondary/60 focus:ring-2 focus:ring-secondary/10 ${
-            error ? "border-red-500/60" : "border-border hover:border-border/80"
+          className={`w-full appearance-none rounded-xl border bg-surface/50 px-3.5 py-2.5 pr-9 text-sm text-text-primary outline-none transition-all duration-150 focus:border-primary/40 focus:bg-surface focus:shadow-[0_0_0_3px_rgba(27,111,255,0.08)] ${
+            error ? "border-red-500/50" : "border-border/70 hover:border-border"
           } ${className ?? ""}`}
           {...props}
         >
