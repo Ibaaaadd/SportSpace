@@ -12,7 +12,7 @@ model User {
   name       String
   email      String   @unique
   phone      String?
-  role       Role     @default(MEMBER)
+  role       UserRole @default(MEMBER)
   status     Status   @default(ACTIVE)
   password   String
   lastActive DateTime @default(now())
@@ -22,7 +22,7 @@ model User {
   @@map("users")
 }
 
-model RoleConfig {
+model Role {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
@@ -31,10 +31,48 @@ model RoleConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@map("role_configs")
+  menuPermissions MenuPermission[]
+
+  @@map("roles")
 }
 
-enum Role {
+model Menu {
+  id        String   @id @default(cuid())
+  label     String
+  icon      String
+  href      String
+  parentId  String?
+  order     Int      @default(0)
+  isGroup   Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   Menu?  @relation("MenuToMenu", fields: [parentId], references: [id], onDelete: Cascade)
+  children Menu[] @relation("MenuToMenu")
+
+  permissions MenuPermission[]
+
+  @@map("menus")
+}
+
+model MenuPermission {
+  id        String  @id @default(cuid())
+  menuId    String
+  roleId    String
+  canView   Boolean @default(false)
+  canCreate Boolean @default(false)
+  canEdit   Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([menuId, roleId])
+  @@map("menu_permissions")
+}
+
+enum UserRole {
   ADMIN
   OPERATOR
   KASIR

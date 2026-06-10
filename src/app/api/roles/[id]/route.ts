@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { Role } from "../../../../generated/prisma/enums";
+import { UserRole } from "../../../../generated/prisma/enums";
 
 type Params = { params: Promise<{ id: string }> };
 
-function matchRoleEnum(name: string): Role | null {
+function matchRoleEnum(name: string): UserRole | null {
   const upper = name.toUpperCase();
-  return (Object.values(Role) as string[]).includes(upper)
-    ? (upper as Role)
+  return (Object.values(UserRole) as string[]).includes(upper)
+    ? (upper as UserRole)
     : null;
 }
 
@@ -23,7 +23,7 @@ async function withUserCount<T extends { name: string }>(role: T) {
 export async function GET(_req: Request, { params }: Params) {
   try {
     const { id } = await params;
-    const role = await prisma.roleConfig.findUnique({ where: { id } });
+    const role = await prisma.role.findUnique({ where: { id } });
 
     if (!role) {
       return NextResponse.json({ error: "Role tidak ditemukan." }, { status: 404 });
@@ -47,14 +47,14 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json({ error: "Nama role wajib diisi." }, { status: 400 });
     }
 
-    const existing = await prisma.roleConfig.findFirst({
+    const existing = await prisma.role.findFirst({
       where: { name: name.trim(), NOT: { id } },
     });
     if (existing) {
       return NextResponse.json({ error: "Nama role sudah digunakan." }, { status: 409 });
     }
 
-    const role = await prisma.roleConfig.update({
+    const role = await prisma.role.update({
       where: { id },
       data: {
         name: name.trim(),
@@ -74,7 +74,7 @@ export async function PUT(request: Request, { params }: Params) {
 export async function DELETE(_req: Request, { params }: Params) {
   try {
     const { id } = await params;
-    const role = await prisma.roleConfig.findUnique({ where: { id } });
+    const role = await prisma.role.findUnique({ where: { id } });
 
     if (!role) {
       return NextResponse.json({ error: "Role tidak ditemukan." }, { status: 404 });
@@ -83,7 +83,7 @@ export async function DELETE(_req: Request, { params }: Params) {
       return NextResponse.json({ error: "Role system tidak dapat dihapus." }, { status: 403 });
     }
 
-    await prisma.roleConfig.delete({ where: { id } });
+    await prisma.role.delete({ where: { id } });
     return NextResponse.json({ message: "Role berhasil dihapus." });
   } catch (err) {
     console.error("[DELETE /api/roles/:id]", err);

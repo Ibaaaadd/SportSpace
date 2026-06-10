@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Badge from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
 import {
@@ -45,153 +45,6 @@ const PERMS: { key: PermKey; label: string }[] = [
   { key: "create", label: "Buat" },
   { key: "edit",   label: "Edit" },
   { key: "delete", label: "Hapus" },
-];
-
-function perms(v: boolean, c: boolean, e: boolean, d: boolean): RolePerms {
-  return { view: v, create: c, edit: e, delete: d };
-}
-
-const STATIC_MENUS: Menu[] = [
-  {
-    id: "m-1", label: "Dashboard", icon: "dashboard", href: "/dashboard",
-    parentId: null, order: 1, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, false, false, false),
-      operator: perms(true, false, false, false),
-      kasir: perms(true, false, false, false),
-      member: perms(true, false, false, false),
-    },
-  },
-  {
-    id: "m-2", label: "Booking", icon: "calendar", href: "/bookings",
-    parentId: null, order: 2, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(true, true, true, false),
-      kasir: perms(true, true, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-3", label: "Pembayaran", icon: "payment", href: "/payments",
-    parentId: null, order: 3, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(true, true, true, false),
-      kasir: perms(true, true, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-4", label: "Master Data", icon: "database", href: "#",
-    parentId: null, order: 4, isGroup: true, isActive: true,
-    access: {
-      admin: perms(true, false, false, false),
-      operator: perms(true, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-5", label: "Jenis Olahraga", icon: "tag", href: "/master/sport-types",
-    parentId: "m-4", order: 1, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(true, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-6", label: "Venue", icon: "pin", href: "/master/venues",
-    parentId: "m-4", order: 2, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(true, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-7", label: "Harga", icon: "dollar", href: "/master/pricing",
-    parentId: "m-4", order: 3, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(true, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-8", label: "Laporan", icon: "chart", href: "#",
-    parentId: null, order: 5, isGroup: true, isActive: true,
-    access: {
-      admin: perms(true, false, false, false),
-      operator: perms(true, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-9", label: "Okupansi", icon: "activity", href: "/report/occupancy",
-    parentId: "m-8", order: 1, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, false, false, false),
-      operator: perms(true, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-10", label: "Pendapatan", icon: "trending", href: "/report/revenue",
-    parentId: "m-8", order: 2, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, false, false, false),
-      operator: perms(false, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-11", label: "Setup", icon: "settings", href: "#",
-    parentId: null, order: 6, isGroup: true, isActive: true,
-    access: {
-      admin: perms(true, false, false, false),
-      operator: perms(false, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-12", label: "Pengguna", icon: "users", href: "/setup/users",
-    parentId: "m-11", order: 1, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(false, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-13", label: "Role", icon: "shield", href: "/setup/roles",
-    parentId: "m-11", order: 2, isGroup: false, isActive: true,
-    access: {
-      admin: perms(true, true, true, true),
-      operator: perms(false, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
-  {
-    id: "m-14", label: "Menu", icon: "menu", href: "/setup/menus",
-    parentId: "m-11", order: 3, isGroup: false, isActive: false,
-    access: {
-      admin: perms(true, false, true, false),
-      operator: perms(false, false, false, false),
-      kasir: perms(false, false, false, false),
-      member: perms(false, false, false, false),
-    },
-  },
 ];
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -391,11 +244,13 @@ function MenuFormPage({
   allMenus,
   onSave,
   onBack,
+  saving,
 }: {
   menu: Menu;
   allMenus: Menu[];
   onSave: (id: string, access: Record<string, RolePerms>, isActive: boolean) => void;
   onBack: () => void;
+  saving: boolean;
 }) {
   const [access, setAccess] = useState<Record<string, RolePerms>>(
     () => JSON.parse(JSON.stringify(menu.access)) as Record<string, RolePerms>
@@ -471,8 +326,10 @@ function MenuFormPage({
             </p>
           </div>
           <div className="flex gap-2 sm:shrink-0">
-            <Button variant="ghost" size="sm" onClick={onBack}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={handleSave}>Simpan Perubahan</Button>
+            <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
+            <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
           </div>
         </div>
       </div>
@@ -653,19 +510,53 @@ function MenuFormPage({
 function MenusContent() {
   const { push } = useToast();
   const [view, setView] = useState<View>("list");
-  const [items, setItems] = useState<Menu[]>(STATIC_MENUS);
+  const [items, setItems] = useState<Menu[]>([]);
+  const [fetching, setFetching] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [editTarget, setEditTarget] = useState<Menu | null>(null);
+
+  const loadMenus = useCallback(async () => {
+    setFetching(true);
+    setFetchError(null);
+    try {
+      const res = await fetch("/api/menus");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setItems(data);
+    } catch {
+      setFetchError("Gagal memuat data menu. Coba refresh.");
+    } finally {
+      setFetching(false);
+    }
+  }, []);
+
+  useEffect(() => { loadMenus(); }, [loadMenus]);
 
   function openEdit(menu: Menu) {
     setEditTarget(menu);
     setView("form");
   }
 
-  function handleSave(id: string, access: Record<string, RolePerms>, isActive: boolean) {
-    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, access, isActive } : m)));
+  async function handleSave(id: string, access: Record<string, RolePerms>, isActive: boolean) {
     const menu = items.find((m) => m.id === id);
-    push({ title: "Akses disimpan", description: `Pengaturan "${menu?.label}" berhasil diperbarui.`, variant: "success" });
-    setView("list");
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/menus/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access, isActive }),
+      });
+      if (!res.ok) throw new Error();
+      const updated: Menu = await res.json();
+      setItems((prev) => prev.map((m) => (m.id === id ? updated : m)));
+      push({ title: "Akses disimpan", description: `Pengaturan "${menu?.label ?? updated.label}" berhasil diperbarui.`, variant: "success" });
+      setView("list");
+    } catch {
+      push({ title: "Gagal menyimpan", description: `Pengaturan "${menu?.label}" tidak tersimpan.`, variant: "error" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ── Form view ──
@@ -676,7 +567,21 @@ function MenusContent() {
         allMenus={items}
         onSave={handleSave}
         onBack={() => setView("list")}
+        saving={saving}
       />
+    );
+  }
+
+  // ── Loading / error states ──
+  if (fetching) {
+    return <p className="text-sm text-text-muted">Memuat data menu...</p>;
+  }
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-sm text-red-400">{fetchError}</p>
+        <Button variant="ghost" size="sm" onClick={loadMenus}>Coba lagi</Button>
+      </div>
     );
   }
 
