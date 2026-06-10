@@ -17,7 +17,7 @@ import Input from "../../../../components/ui/Input";
 import Modal from "../../../../components/ui/Modal";
 import Select from "../../../../components/ui/Select";
 import { ToastProvider, useToast } from "../../../../components/ui/Toast";
-import { ROLE_BADGE, ROLE_OPTIONS, formatDate, normalizeUser, type UserItem } from "./_data";
+import { getRoleBadgeVariant, formatDate, normalizeUser, toRoleOptions, type UserItem } from "./_data";
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
@@ -53,6 +53,7 @@ function UsersListContent() {
   const { push } = useToast();
 
   const [users, setUsers]               = useState<UserItem[]>([]);
+  const [roles, setRoles]               = useState<{ id: string; name: string }[]>([]);
   const [fetching, setFetching]         = useState(true);
   const [fetchError, setFetchError]     = useState<string | null>(null);
   const [search, setSearch]             = useState("");
@@ -78,12 +79,19 @@ function UsersListContent() {
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
+  useEffect(() => {
+    fetch("/api/roles")
+      .then((res) => res.json())
+      .then((data) => setRoles(data))
+      .catch(() => setRoles([]));
+  }, []);
+
   const filtered = useMemo(() =>
     users.filter((u) => {
       const matchSearch =
         u.name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase());
-      const matchRole   = filterRole   ? u.role   === filterRole   : true;
+      const matchRole   = filterRole   ? u.roleId === filterRole : true;
       const matchStatus = filterStatus ? u.status === filterStatus : true;
       return matchSearch && matchRole && matchStatus;
     }),
@@ -133,10 +141,9 @@ function UsersListContent() {
       key: "role",
       header: "Role",
       align: "center",
-      render: (row) => {
-        const cfg = ROLE_BADGE[row.role];
-        return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
-      },
+      render: (row) => (
+        <Badge variant={getRoleBadgeVariant(row.roleName)}>{row.roleName}</Badge>
+      ),
     },
     {
       key: "status",
@@ -190,8 +197,8 @@ function UsersListContent() {
 
   const counts = {
     total:    users.length,
-    admin:    users.filter((u) => u.role === "admin").length,
-    operator: users.filter((u) => u.role === "operator").length,
+    admin:    users.filter((u) => u.roleName.toLowerCase() === "admin").length,
+    operator: users.filter((u) => u.roleName.toLowerCase() === "operator").length,
     active:   users.filter((u) => u.status === "active").length,
   };
 
@@ -254,7 +261,7 @@ function UsersListContent() {
                 <Select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  options={ROLE_OPTIONS}
+                  options={toRoleOptions(roles)}
                   placeholder="Semua role"
                 />
               </div>

@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: Params) {
       where: { id },
       select: {
         id: true, name: true, email: true, phone: true,
-        role: true, status: true, lastActive: true, createdAt: true,
+        role: { select: { id: true, name: true } }, status: true, lastActive: true, createdAt: true,
       },
     });
 
@@ -32,10 +32,16 @@ export async function PUT(request: Request, { params }: Params) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, email, phone, role, active, password } = body;
+    const { name, email, phone, roleId, active, password } = body;
 
-    if (!name || !email || !role) {
+    if (!name || !email || !roleId) {
       return NextResponse.json({ error: "Field name, email, dan role wajib diisi." }, { status: 400 });
+    }
+
+    // Cek role valid
+    const role = await prisma.role.findUnique({ where: { id: roleId } });
+    if (!role) {
+      return NextResponse.json({ error: "Role tidak ditemukan." }, { status: 400 });
     }
 
     // Cek email dipakai user lain
@@ -50,7 +56,7 @@ export async function PUT(request: Request, { params }: Params) {
       name,
       email,
       phone: phone || null,
-      role: role.toUpperCase(),
+      roleId,
       status: active === false ? "INACTIVE" : "ACTIVE",
     };
 
@@ -64,7 +70,7 @@ export async function PUT(request: Request, { params }: Params) {
       data: updateData,
       select: {
         id: true, name: true, email: true, phone: true,
-        role: true, status: true, lastActive: true, createdAt: true,
+        role: { select: { id: true, name: true } }, status: true, lastActive: true, createdAt: true,
       },
     });
 

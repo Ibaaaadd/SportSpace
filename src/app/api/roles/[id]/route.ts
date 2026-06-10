@@ -1,21 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { UserRole } from "../../../../generated/prisma/enums";
 
 type Params = { params: Promise<{ id: string }> };
 
-function matchRoleEnum(name: string): UserRole | null {
-  const upper = name.toUpperCase();
-  return (Object.values(UserRole) as string[]).includes(upper)
-    ? (upper as UserRole)
-    : null;
-}
-
-async function withUserCount<T extends { name: string }>(role: T) {
-  const enumValue = matchRoleEnum(role.name);
-  const userCount = enumValue
-    ? await prisma.user.count({ where: { role: enumValue } })
-    : 0;
+async function withUserCount<T extends { id: string }>(role: T) {
+  const userCount = await prisma.user.count({ where: { roleId: role.id } });
   return { ...role, userCount };
 }
 
@@ -81,6 +70,14 @@ export async function DELETE(_req: Request, { params }: Params) {
     }
     if (role.isSystem) {
       return NextResponse.json({ error: "Role system tidak dapat dihapus." }, { status: 403 });
+    }
+
+    const userCount = await prisma.user.count({ where: { roleId: id } });
+    if (userCount > 0) {
+      return NextResponse.json(
+        { error: `Role masih digunakan oleh ${userCount} user. Pindahkan user terlebih dahulu.` },
+        { status: 409 }
+      );
     }
 
     await prisma.role.delete({ where: { id } });

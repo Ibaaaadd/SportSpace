@@ -1,24 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
-import { UserRole } from "../../../generated/prisma/enums";
 
 // GET /api/roles — ambil semua role + user count per role
 export async function GET() {
   try {
-    const [roles, ...roleCounts] = await Promise.all([
-      prisma.role.findMany({ orderBy: { createdAt: "asc" } }),
-      // Hitung user per UserRole enum secara paralel
-      ...Object.values(UserRole).map((r) =>
-        prisma.user.count({ where: { role: r } }).then((count) => ({ role: r, count }))
-      ),
-    ]);
-
-    const countMap = Object.fromEntries(
-      roleCounts.map(({ role, count }) => [role.toLowerCase(), count])
-    );
+    const roles = await prisma.role.findMany({
+      orderBy: { createdAt: "asc" },
+      include: { _count: { select: { users: true } } },
+    });
 
     return NextResponse.json(
-      roles.map((r) => ({ ...r, userCount: countMap[r.name.toLowerCase()] ?? 0 }))
+      roles.map(({ _count, ...r }) => ({ ...r, userCount: _count.users }))
     );
   } catch (err) {
     console.error("[GET /api/roles]", err);

@@ -11,7 +11,7 @@ export async function GET() {
         name: true,
         email: true,
         phone: true,
-        role: true,
+        role: { select: { id: true, name: true } },
         status: true,
         lastActive: true,
         createdAt: true,
@@ -29,11 +29,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, role, password, active } = body;
+    const { name, email, phone, roleId, password, active } = body;
 
     // Validasi field wajib
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !password || !roleId) {
       return NextResponse.json({ error: "Field name, email, role, dan password wajib diisi." }, { status: 400 });
+    }
+
+    // Cek role valid
+    const role = await prisma.role.findUnique({ where: { id: roleId } });
+    if (!role) {
+      return NextResponse.json({ error: "Role tidak ditemukan." }, { status: 400 });
     }
 
     // Cek email sudah dipakai
@@ -49,13 +55,13 @@ export async function POST(request: Request) {
         name,
         email,
         phone: phone || null,
-        role: role.toUpperCase(),
+        roleId,
         status: active === false ? "INACTIVE" : "ACTIVE",
         password: hashedPassword,
       },
       select: {
         id: true, name: true, email: true, phone: true,
-        role: true, status: true, lastActive: true, createdAt: true,
+        role: { select: { id: true, name: true } }, status: true, lastActive: true, createdAt: true,
       },
     });
 

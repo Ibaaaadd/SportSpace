@@ -18,7 +18,7 @@ function CreateUserContent() {
           name:     form.name,
           email:    form.email,
           phone:    form.phone,
-          role:     form.role,
+          roleId:   form.roleId,
           password: form.password,
           active:   form.active,
         }),

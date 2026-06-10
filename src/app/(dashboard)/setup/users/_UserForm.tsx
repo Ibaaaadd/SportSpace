@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Lock, User } from "lucide-react";
 import Button from "../../../../components/ui/Button";
 import {
@@ -11,7 +11,7 @@ import Select from "../../../../components/ui/Select";
 import Toggle from "../../../../components/ui/Toggle";
 import {
   type FormData, type FormErrors, type UserItem,
-  EMPTY_FORM, ROLE_OPTIONS, validateEmail, getInitials,
+  EMPTY_FORM, toRoleOptions, validateEmail, getInitials,
 } from "./_data";
 
 type UserFormProps = {
@@ -28,7 +28,7 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
           name: editTarget.name,
           email: editTarget.email,
           phone: editTarget.phone,
-          role: editTarget.role,
+          roleId: editTarget.roleId,
           active: editTarget.status === "active",
           password: "",
           confirmPassword: "",
@@ -41,13 +41,24 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
   const [saving, setSaving] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/roles")
+      .then((res) => res.json())
+      .then((data: { id: string; name: string }[]) => {
+        setRoles(data);
+        setForm((f) => (f.roleId ? f : { ...f, roleId: data[0]?.id ?? "" }));
+      })
+      .catch(() => setRoles([]));
+  }, []);
 
   function validate(): FormErrors {
     const e: FormErrors = {};
     if (!form.name.trim())               e.name  = "Nama wajib diisi";
     if (!form.email.trim())              e.email = "Email wajib diisi";
     else if (!validateEmail(form.email)) e.email = "Format email tidak valid";
-    if (!form.role)                      e.role  = "Role wajib dipilih";
+    if (!form.roleId)                    e.roleId = "Role wajib dipilih";
 
     const needsPassword = !editTarget || form.changePassword;
     if (needsPassword) {
@@ -199,10 +210,10 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
               </div>
               <Select
                 label="Role"
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                options={ROLE_OPTIONS}
-                error={errors.role}
+                value={form.roleId}
+                onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value }))}
+                options={toRoleOptions(roles)}
+                error={errors.roleId}
               />
             </CardContent>
           </Card>

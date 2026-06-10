@@ -55,18 +55,24 @@ async function seedRoles() {
 async function seedUsers() {
   const password = await bcrypt.hash("password123", 10);
 
-  const users: { name: string; email: string; phone: string; role: "ADMIN" | "OPERATOR" | "KASIR" | "MEMBER" }[] = [
-    { name: "Admin SportSpace", email: "admin@sportspace.test", phone: "081200000001", role: "ADMIN" },
-    { name: "Operator Lapangan", email: "operator@sportspace.test", phone: "081200000002", role: "OPERATOR" },
-    { name: "Kasir Toko", email: "kasir@sportspace.test", phone: "081200000003", role: "KASIR" },
-    { name: "Member Demo", email: "member@sportspace.test", phone: "081200000004", role: "MEMBER" },
+  const roles = await prisma.role.findMany({
+    where: { name: { in: ["Admin", "Operator", "Kasir", "Member"] } },
+  });
+  const roleIdByName = Object.fromEntries(roles.map((r) => [r.name, r.id]));
+
+  const users: { name: string; email: string; phone: string; roleName: "Admin" | "Operator" | "Kasir" | "Member" }[] = [
+    { name: "Admin SportSpace", email: "admin@sportspace.test", phone: "081200000001", roleName: "Admin" },
+    { name: "Operator Lapangan", email: "operator@sportspace.test", phone: "081200000002", roleName: "Operator" },
+    { name: "Kasir Toko", email: "kasir@sportspace.test", phone: "081200000003", roleName: "Kasir" },
+    { name: "Member Demo", email: "member@sportspace.test", phone: "081200000004", roleName: "Member" },
   ];
 
   for (const u of users) {
+    const { roleName, ...data } = u;
     await prisma.user.upsert({
       where: { email: u.email },
       update: {},
-      create: { ...u, password },
+      create: { ...data, roleId: roleIdByName[roleName], password },
     });
   }
 

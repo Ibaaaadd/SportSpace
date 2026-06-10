@@ -45,7 +45,7 @@ function EditUserContent() {
           name:     form.name,
           email:    form.email,
           phone:    form.phone,
-          role:     form.role,
+          roleId:   form.roleId,
           active:   form.active,
           // Hanya kirim password kalau diisi
           ...(form.changePassword && form.password ? { password: form.password } : {}),

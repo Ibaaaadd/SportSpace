@@ -1,14 +1,16 @@
 // Shared types, constants, and helpers for the users module.
 
-export type UserRole = "admin" | "operator" | "kasir" | "member";
 export type UserStatus = "active" | "inactive";
+
+export type RoleOption = { value: string; label: string };
 
 export type UserItem = {
   id: string;
   name: string;
   email: string;
   phone: string;
-  role: UserRole;
+  roleId: string;
+  roleName: string;
   status: UserStatus;
   lastActive: string;
 };
@@ -17,7 +19,7 @@ export type FormData = {
   name: string;
   email: string;
   phone: string;
-  role: string;
+  roleId: string;
   active: boolean;
   password: string;
   confirmPassword: string;
@@ -26,22 +28,20 @@ export type FormData = {
 
 export type FormErrors = Partial<Record<keyof FormData, string>>;
 
-export const ROLE_OPTIONS = [
-  { value: "admin",    label: "Admin" },
-  { value: "operator", label: "Operator" },
-  { value: "kasir",    label: "Kasir" },
-  { value: "member",   label: "Member" },
-];
-
-export const ROLE_BADGE: Record<UserRole, { variant: "info" | "success" | "warning" | "muted"; label: string }> = {
-  admin:    { variant: "info",    label: "Admin" },
-  operator: { variant: "success", label: "Operator" },
-  kasir:    { variant: "warning", label: "Kasir" },
-  member:   { variant: "muted",   label: "Member" },
+const ROLE_BADGE_VARIANTS: Record<string, "info" | "success" | "warning" | "muted"> = {
+  admin: "info",
+  operator: "success",
+  kasir: "warning",
+  member: "muted",
 };
 
+// Warna badge berdasarkan nama role. Role custom yang tidak dikenal -> "muted".
+export function getRoleBadgeVariant(roleName: string): "info" | "success" | "warning" | "muted" {
+  return ROLE_BADGE_VARIANTS[roleName.toLowerCase()] ?? "muted";
+}
+
 export const EMPTY_FORM: FormData = {
-  name: "", email: "", phone: "", role: "operator", active: true,
+  name: "", email: "", phone: "", roleId: "", active: true,
   password: "", confirmPassword: "", changePassword: false,
 };
 
@@ -57,13 +57,13 @@ export function getInitials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
-// Normalize API response (DB pakai uppercase enum) → frontend types (lowercase)
+// Normalize API response -> frontend UserItem
 export function normalizeUser(u: {
   id: string;
   name: string;
   email: string;
   phone: string | null;
-  role: string;
+  role: { id: string; name: string };
   status: string;
   lastActive: string;
 }): UserItem {
@@ -72,8 +72,14 @@ export function normalizeUser(u: {
     name: u.name,
     email: u.email,
     phone: u.phone ?? "",
-    role: u.role.toLowerCase() as UserRole,
+    roleId: u.role.id,
+    roleName: u.role.name,
     status: u.status.toLowerCase() as UserStatus,
     lastActive: u.lastActive,
   };
+}
+
+// Map daftar role dari /api/roles -> opsi untuk <Select>
+export function toRoleOptions(roles: { id: string; name: string }[]): RoleOption[] {
+  return roles.map((r) => ({ value: r.id, label: r.name }));
 }

@@ -12,12 +12,14 @@ model User {
   name       String
   email      String   @unique
   phone      String?
-  role       UserRole @default(MEMBER)
+  roleId     String
   status     Status   @default(ACTIVE)
   password   String
   lastActive DateTime @default(now())
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  role Role @relation(fields: [roleId], references: [id])
 
   @@map("users")
 }
@@ -31,6 +33,7 @@ model Role {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  users           User[]
   menuPermissions MenuPermission[]
 
   @@map("roles")
@@ -70,13 +73,6 @@ model MenuPermission {
 
   @@unique([menuId, roleId])
   @@map("menu_permissions")
-}
-
-enum UserRole {
-  ADMIN
-  OPERATOR
-  KASIR
-  MEMBER
 }
 
 enum Status {
