@@ -19,27 +19,38 @@ Sistem ini bersifat **multi-sport** (padel, futsal, mini soccer, dll) dan **mult
 
 ## 2. TECH STACK
 
+> **Update:** Stack Supabase pada rancangan awal sudah tidak dipakai. Project sekarang
+> berjalan dengan PostgreSQL biasa (self-hosted/manual) + Prisma, dan auth custom
+> (bcrypt, tanpa Supabase Auth). Tabel di bawah mencerminkan kondisi terkini.
+
 | Layer | Teknologi | Keterangan |
 |---|---|---|
-| Frontend | Next.js 14 (App Router) | SSR + CSR hybrid |
-| Styling | Tailwind CSS + shadcn/ui | Komponen siap pakai |
-| State Management | Zustand | Global state ringan |
-| Server State | TanStack Query v5 | Cache & sync data dari server |
+| Frontend | Next.js 15 (App Router) | SSR + CSR hybrid |
+| Styling | Tailwind CSS v4 + komponen custom | Tidak pakai shadcn/ui, semua UI (Button, Card, Modal, DataTable, dll) dibuat sendiri di `src/components/ui` |
+| State Management | React state (useState/hooks) | Zustand tidak dipakai |
+| Server State | fetch() langsung ke API Route | TanStack Query tidak dipakai |
 | Language | TypeScript (strict) | Seluruh codebase |
-| Backend | Next.js API Routes + Server Actions | Tidak perlu server terpisah |
-| Database | Supabase (PostgreSQL) | BaaS lengkap |
-| ORM | Prisma | Type-safe query builder |
-| Auth | Supabase Auth | JWT + session management |
-| Realtime | Supabase Realtime | Update slot tanpa reload |
-| Storage | Supabase Storage | Upload foto lapangan |
-| Email | Resend | Notifikasi email transaksional |
-| WA Notif | Fonnte API | Notifikasi WhatsApp lokal |
-| Deployment | Vercel | FE + API Routes |
-| DB Hosting | Supabase Cloud | Free tier cukup untuk porto |
+| Backend | Next.js API Routes | Server Actions belum dipakai |
+| Database | PostgreSQL (manual, via `pg`) | Bukan Supabase |
+| ORM | Prisma 7 (`@prisma/adapter-pg`) | Type-safe query builder |
+| Auth | Custom (bcryptjs untuk hash password) | Belum ada session/JWT middleware — **belum diimplementasi** |
+| Realtime | - | Belum diimplementasi (tidak pakai Supabase Realtime) |
+| Storage | - | Upload foto lapangan masih pakai DataURL/local preview |
+| Email | - | Belum diimplementasi (Resend dibatalkan) |
+| WA Notif | - | Belum diimplementasi (Fonnte dibatalkan) |
+| Deployment | Belum ditentukan | Sebelumnya direncanakan Vercel |
+| DB Hosting | Belum ditentukan | Sebelumnya direncanakan Supabase Cloud |
 
 ---
 
 ## 3. MONOREPO STRUCTURE
+
+> **Catatan:** struktur di bawah ini adalah rancangan awal (termasuk folder Supabase,
+> hooks realtime, store Zustand, dll yang sudah dibatalkan — lihat section 2).
+> Struktur **aktual saat ini** jauh lebih sederhana: hanya `src/app`, `src/components`,
+> dan `src/lib/prisma.ts`. Folder `hooks/`, `store/`, `lib/supabase/`, `lib/services/`,
+> `lib/repositories/`, `lib/actions/`, `lib/auth/` di bawah **belum dibuat** — akan
+> ditambahkan bertahap sesuai modul yang dikerjakan.
 
 ```
 booking-lapangan/
@@ -202,32 +213,38 @@ booking-lapangan/
 
 ## 4. DATABASE SCHEMA
 
-> Schema lengkap ada di `prisma/schema.prisma`. Berikut penjelasan per tabel dan relasinya.
+> Schema lengkap ada di `prisma/schema.prisma`. Bagian 4.1 adalah **kondisi aktual saat ini**.
+> Bagian 4.2 dan 4.3 adalah **rancangan untuk fitur yang belum dibuat tabelnya** (master data
+> & transaksi) — masih jadi mock/UI-only di frontend.
 
-### 4.1 Auth & RBAC
+### 4.1 Auth & RBAC (AKTUAL — sudah ada di `schema.prisma`)
 
-**`roles`** — Daftar role yang bisa di-manage via UI
+**`users`** — User aplikasi (bukan extend Supabase Auth lagi)
 ```
-id, name, slug, is_active
-Contoh: { name: "Super Admin", slug: "super-admin" }
-```
-
-**`users`** — Extend dari Supabase Auth
-```
-id (FK ke auth.users Supabase), role_id, name, phone, is_active, created_at
+id (cuid), name, email (unique), phone?, role (enum: ADMIN|OPERATOR|KASIR|MEMBER),
+status (enum: ACTIVE|INACTIVE), password (bcrypt hash),
+lastActive, createdAt, updatedAt
 ```
 
-**`menus`** — Menu dinamis yang dikonfigurasi via UI
+**`role_configs`** — Role custom + permission, dikelola via Setup → Roles
 ```
-id, parent_id (self-reference untuk sub-menu), name, url, icon, order_index, is_active
+id (cuid), name (unique), description?, permissions (string[]), isSystem, createdAt, updatedAt
 ```
+- `permissions` berisi key seperti: `"dashboard.view"`, `"master.view"`, `"master.create"`,
+  `"master.edit"`, `"master.delete"`, `"transaction.view"`, `"transaction.create"`,
+  `"transaction.edit"`, `"transaction.delete"`, `"report.view"`, `"report.export"`,
+  `"setup.view"`, `"setup.create"`, `"setup.edit"`, `"setup.delete"`.
+- Tidak ada lagi tabel `menus` / `role_permissions` per-menu. Sidebar **statis di kode**
+  (lihat `src/components/layout/Sidebar.tsx`) dan tiap item menu cukup ditandai dengan
+  permission key di atas — lihat section 5.4 & 6.2 yang sudah diperbarui.
+- `role.id` di `users` saat ini masih **enum** (`Role`), belum FK ke `role_configs.id`.
+  Ini perlu disinkronkan kalau mau role custom di `role_configs` benar-benar dipakai
+  untuk login user (lihat catatan di 5.4).
 
-**`role_permissions`** — Permission tiap role per menu
-```
-id, role_id, menu_id, can_read, can_create, can_update, can_delete, can_show
-```
+> Status modul terkait: Setup → Users & Setup → Roles **sudah CRUD penuh ke DB**.
+> Setup → Menus **dihapus** dari rencana (digantikan permission matrix di Setup → Roles).
 
-### 4.2 Master Data
+### 4.2 Master Data (RENCANA — belum ada tabel, masih mock di UI)
 
 **`sport_types`** — Jenis olahraga
 ```
@@ -247,7 +264,7 @@ Contoh: Lapangan Padel A, 06:00-18:00, weekday = 150.000/jam
         Lapangan Padel A, 18:00-23:00, weekday = 200.000/jam
 ```
 
-### 4.3 Transaksi
+### 4.3 Transaksi (RENCANA — belum ada tabel, halaman masih placeholder)
 
 **`bookings`** — Booking yang dibuat user
 ```
@@ -332,19 +349,32 @@ channel (whatsapp|email|in_app), message, is_read, sent_at
 4. Jika user waiting list tidak booking dalam 30 menit → notif ke user berikutnya
 ```
 
-### 5.4 Flow RBAC & Dynamic Menu
+### 5.4 Flow RBAC & Sidebar (REVISI — sidebar statis, permission via `role_configs`)
+
+> Pendekatan "menu dinamis dari DB" (tabel `menus` + `role_permissions`) **dibatalkan**.
+> Sidebar tetap didefinisikan statis di kode (mudah di-maintain & type-safe), tapi
+> visibility tiap item dikontrol dari `role_configs.permissions` milik role user yang login.
 
 ```
-1. User login via Supabase Auth
-2. Middleware cek session → ambil user.role_id
-3. GET /api/menus → query menus JOIN role_permissions WHERE role_id = user.role_id
-4. Response: array menu yang boleh diakses beserta permission-nya
-5. AdminSidebar.tsx render menu dari response tersebut
-6. Tiap navigasi ke halaman: PermissionGuard.tsx cek apakah role punya can_read untuk menu ini
-7. Tiap render tombol: usePermission() hook cek can_create / can_update / can_delete
-8. Tiap API route: requirePermission() dipanggil di awal handler
-   → jika tidak ada permission: return 403
+1. User login (form custom, password dicek pakai bcrypt) → session dibuat
+   [BELUM diimplementasi: middleware/session handling]
+2. Middleware/helper ambil session → dapatkan user.role
+3. Ambil permission set untuk role tsb dari role_configs.permissions
+4. Sidebar.tsx (statis): tiap NavItem ditandai requiredPermission, mis.
+   { label: "Roles", href: "/setup/roles", icon: ShieldCheck, permission: "setup.view" }
+5. Saat render, filter navGroups/items: tampilkan hanya item yang
+   permission-nya ada di permission set user
+6. Tiap halaman: cek permission yang sama (mis. via helper requirePermission(role, "setup.view"))
+   → kalau tidak ada akses, redirect / tampilkan 403
+7. Tiap API route CRUD: cek permission sebelum proses (mis. "setup.create" untuk POST)
+   → kalau tidak ada permission: return 403
 ```
+
+Implikasi terhadap modul Setup:
+- **Setup → Roles**: tetap jadi satu-satunya tempat atur permission per role (sudah ada UI-nya).
+- **Setup → Menus**: dihapus — struktur menu sudah fix di kode, tidak perlu CRUD menu via UI.
+- Perlu kerja tambahan: auth/session middleware (login belum berfungsi), dan helper
+  `getCurrentUser()` / `requirePermission()` yang membaca `role_configs.permissions`.
 
 ---
 
@@ -369,15 +399,17 @@ Data source:
   → setiap ada perubahan, grid otomatis refresh tanpa reload halaman
 ```
 
-### 6.2 Dynamic Sidebar (`AdminSidebar.tsx`)
+### 6.2 Sidebar Statis + Filter Permission (`src/components/layout/Sidebar.tsx`)
 
 ```
-- Fetch menu dari /api/menus (sudah difilter sesuai role user yang login)
-- Render parent menu dengan children (sub-menu)
-- Highlight active menu berdasarkan pathname
-- Icon dari library lucide-react (nama icon disimpan di kolom menus.icon)
-- Jika user tidak punya akses sama sekali ke sebuah parent menu,
-  parent menu tersebut tidak muncul
+- Struktur navGroups & NavItem didefinisikan statis di file (sudah ada, lihat Sidebar.tsx)
+- Setiap NavItem ditambah field `permission` (mis. "setup.view", "master.view", dst)
+- Saat render: ambil permission set role user (dari role_configs via session),
+  filter navGroups.items yang permission-nya termasuk di set tsb
+- Jika sebuah group tidak punya item yang lolos filter, group tersebut tidak ditampilkan
+- Highlight active menu berdasarkan pathname (sudah ada)
+- Icon tetap dari lucide-react, ditentukan langsung di kode (bukan dari DB)
+- User card di bawah sidebar perlu diisi data user dari session (saat ini hardcoded "Admin / Operator")
 ```
 
 ### 6.3 Permission Guard (`PermissionGuard.tsx`)
@@ -545,22 +577,13 @@ export const notificationService = {
 
 ## 8. ENVIRONMENT VARIABLES
 
+> Update: tidak lagi pakai Supabase/Resend/Fonnte. Saat ini cukup koneksi Postgres untuk Prisma.
+
 ```bash
-# .env.example — copy ke .env.local dan isi nilainya
+# .env — isi sesuai koneksi PostgreSQL lokal/manual
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=       # hanya untuk server, jangan expose ke client
-
-# Database (Prisma)
-DATABASE_URL=                     # connection string PostgreSQL dari Supabase
-
-# Email (Resend)
-RESEND_API_KEY=
-
-# WhatsApp (Fonnte)
-FONNTE_API_TOKEN=
+# Database (Prisma + pg)
+DATABASE_URL=                     # connection string PostgreSQL
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -570,17 +593,18 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ## 9. SEEDING DATA AWAL
 
-Jalankan `npx prisma db seed` untuk mengisi data awal:
+Jalankan `npx prisma db seed` (lihat `prisma/seed.ts`):
 
 ```
-Roles: Super Admin, Operator, Kasir, Member
-Menus: semua menu sesuai SYSTEM_SPEC section 5 (Setup, Master, Transaksi, Member, Report)
-Role Permissions: sesuai permission matrix di SYSTEM_SPEC
-User: admin@lapangan.id / password: Admin123! (role Super Admin)
-Sport Types: Padel, Futsal, Mini Soccer, Badminton
-Venue sample: 2 lapangan Padel, 2 lapangan Futsal
-Pricing rules: weekday & weekend untuk masing-masing venue
+role_configs (4 role sistem, via upsert):
+  - Admin    → semua permission (dashboard, master, transaction, report, setup CRUD)
+  - Operator → dashboard.view, master.view, transaction CRUD, report.view
+  - Kasir    → dashboard.view, transaction CRUD, report.view
+  - Member   → dashboard.view, transaction.view, transaction.create
 ```
+
+> Belum di-seed: user admin default, sport types, venue sample, pricing rules
+> (menyusul setelah modul Master Data punya tabel & API).
 
 ---
 
