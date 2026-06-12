@@ -135,40 +135,35 @@ export default function RoleForm({ editTarget, onSave, onBack }: RoleFormProps) 
     if (error) setApiError(error);
   }
 
-  const breadcrumb = editTarget ? `Edit — ${editTarget.name}` : "Tambah Role Baru";
-
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex w-fit items-center gap-1.5 text-xs text-text-muted transition hover:text-text-primary"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-          Kembali ke Daftar Role
-        </button>
-        <div className="mt-1 flex flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-text-muted transition hover:border-border hover:text-text-primary"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2} />
+          </button>
           <div>
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-text-muted/50">
-              Setup / Roles / {breadcrumb}
-            </p>
             <h1 className="text-xl font-bold tracking-tight text-text-primary">
-              {editTarget ? "Edit Role" : "Tambah Role Baru"}
+              {editTarget ? "Edit Role" : "Tambah Role"}
             </h1>
-            <p className="mt-0.5 text-sm text-text-muted">
+            <p className="text-sm text-text-muted">
               {editTarget
                 ? "Perbarui informasi dan konfigurasi izin akses."
                 : "Buat role baru dengan konfigurasi izin akses."}
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
-              {editTarget ? "Simpan Perubahan" : "Buat Role"}
-            </Button>
-          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
+            {editTarget ? "Simpan" : "Buat Role"}
+          </Button>
         </div>
       </div>
 
@@ -238,17 +233,6 @@ export default function RoleForm({ editTarget, onSave, onBack }: RoleFormProps) 
             />
           </CardContent>
         </Card>
-      </div>
-
-      {/* Bottom save bar */}
-      <div className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/80 px-5 py-3.5">
-        <p className="text-sm text-text-muted">{form.permissions.length} izin dipilih</p>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
-          <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
-            {editTarget ? "Simpan Perubahan" : "Buat Role"}
-          </Button>
-        </div>
       </div>
     </div>
   );

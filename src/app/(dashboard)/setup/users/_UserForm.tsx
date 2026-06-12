@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Lock, User } from "lucide-react";
 import Button from "../../../../components/ui/Button";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
+  Card, CardContent, CardHeader, CardTitle,
 } from "../../../../components/ui/Card";
 import Input from "../../../../components/ui/Input";
 import Select from "../../../../components/ui/Select";
@@ -81,40 +81,35 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
     if (error) setApiError(error);
   }
 
-  const breadcrumb = editTarget ? `Edit — ${editTarget.name}` : "Tambah User Baru";
-
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex w-fit items-center gap-1.5 text-xs text-text-muted transition hover:text-text-primary"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-          Kembali ke Daftar User
-        </button>
-        <div className="mt-1 flex flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-text-muted transition hover:border-border hover:text-text-primary"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2} />
+          </button>
           <div>
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-text-muted/50">
-              Setup / Users / {breadcrumb}
-            </p>
             <h1 className="text-xl font-bold tracking-tight text-text-primary">
-              {editTarget ? "Edit User" : "Tambah User Baru"}
+              {editTarget ? "Edit User" : "Tambah User"}
             </h1>
-            <p className="mt-0.5 text-sm text-text-muted">
+            <p className="text-sm text-text-muted">
               {editTarget
                 ? "Perbarui data dan hak akses pengguna."
-                : "Isi informasi akun pengguna baru."}
+                : "Isi data dan hak akses pengguna baru."}
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
-              {editTarget ? "Simpan Perubahan" : "Tambah User"}
-            </Button>
-          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
+            {editTarget ? "Simpan" : "Tambah"}
+          </Button>
         </div>
       </div>
 
@@ -130,10 +125,6 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
         {/* Left — avatar preview + status */}
         <div className="flex flex-col gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Foto Profil</CardTitle>
-              <CardDescription>Inisial dari nama pengguna.</CardDescription>
-            </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center gap-3 py-2">
                 <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-secondary text-2xl font-bold text-white shadow-[0_0_24px_rgba(27,111,255,0.3)]">
@@ -152,10 +143,6 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Status Akun</CardTitle>
-              <CardDescription>Akun nonaktif tidak dapat login.</CardDescription>
-            </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
@@ -163,7 +150,7 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
                     {form.active ? "Aktif" : "Nonaktif"}
                   </p>
                   <p className="text-xs text-text-muted">
-                    {form.active ? "User dapat login." : "Login diblokir."}
+                    {form.active ? "Dapat login" : "Login diblokir"}
                   </p>
                 </div>
                 <Toggle
@@ -181,7 +168,6 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
           <Card>
             <CardHeader>
               <CardTitle>Informasi Akun</CardTitle>
-              <CardDescription>Data identitas dan role pengguna.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <Input
@@ -221,11 +207,6 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
           <Card>
             <CardHeader>
               <CardTitle>Keamanan</CardTitle>
-              <CardDescription>
-                {editTarget
-                  ? "Biarkan kosong jika tidak ingin mengubah password."
-                  : "Atur password untuk akun baru."}
-              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               {editTarget && (
@@ -246,14 +227,7 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
                   }`}
                 >
                   <Lock className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-                  <div className="flex-1">
-                    <p className="font-medium leading-tight">
-                      {form.changePassword ? "Ubah Password Aktif" : "Ubah Password"}
-                    </p>
-                    <p className="text-xs opacity-70">
-                      {form.changePassword ? "Klik untuk batal" : "Klik untuk mengatur password baru"}
-                    </p>
-                  </div>
+                  <p className="flex-1 font-medium leading-tight">Ubah Password</p>
                   <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-all ${
                     form.changePassword ? "border-secondary bg-secondary text-white" : "border-border/60"
                   }`}>
@@ -306,21 +280,6 @@ export default function UserForm({ editTarget, onSave, onBack }: UserFormProps) 
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
-
-      {/* Bottom save bar */}
-      <div className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/80 px-5 py-3.5">
-        <p className="text-sm text-text-muted">
-          {editTarget
-            ? `Mengedit: ${editTarget.name}`
-            : "User baru akan ditambahkan ke sistem."}
-        </p>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
-          <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
-            {editTarget ? "Simpan Perubahan" : "Tambah User"}
-          </Button>
         </div>
       </div>
     </div>

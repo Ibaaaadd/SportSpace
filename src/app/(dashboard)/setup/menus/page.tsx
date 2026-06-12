@@ -184,37 +184,68 @@ function SidebarTree({
     return ROLES_LIST.filter((r) => menu.access[r]?.view).length;
   }
 
-  function renderItem(item: Menu, depth = 0) {
+  function renderChild(item: Menu) {
+    return (
+      <div
+        key={item.id}
+        className="group flex items-center gap-3 px-4 py-2.5 pl-14 transition-colors hover:bg-surface-2/40"
+      >
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.isActive ? "bg-green-400" : "bg-border"}`} />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2/60 text-text-muted">
+          <MenuIcon name={item.icon} />
+        </div>
+        <span className="flex-1 truncate text-sm text-text-primary">{item.label}</span>
+        <span className="text-[10px] font-medium text-text-muted/50">{countViewable(item)} role</span>
+        <button
+          type="button"
+          onClick={() => onEdit(item)}
+          className="invisible flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary group-hover:visible"
+          aria-label={`Edit akses ${item.label}`}
+        >
+          <IconEdit />
+        </button>
+      </div>
+    );
+  }
+
+  function renderRoot(item: Menu) {
     const children = items.filter((m) => m.parentId === item.id).sort((a, b) => a.order - b.order);
     const hasChildren = children.length > 0;
     const isExpanded = expanded.has(item.id);
 
     return (
-      <div key={item.id}>
-        <div
-          className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all hover:bg-surface-2/60 ${
-            depth > 0 ? "pl-8" : ""
-          }`}
-        >
-          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.isActive ? "bg-green-400" : "bg-border"}`} />
-          <MenuIcon name={item.icon} />
-          <span className="flex-1 truncate text-sm text-text-primary">{item.label}</span>
-          <span className="text-[10px] text-text-muted/50">{countViewable(item)} role</span>
-
+      <div
+        key={item.id}
+        className="overflow-hidden rounded-2xl border border-border/70 bg-surface/60 transition-all duration-200 hover:border-border hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
+      >
+        <div className="group flex items-center gap-3 px-4 py-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
+            <MenuIcon name={item.icon} className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold text-text-primary">{item.label}</span>
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.isActive ? "bg-green-400" : "bg-border"}`} />
+            </div>
+            <p className="truncate text-xs text-text-muted/60">{item.href}</p>
+          </div>
+          <span className="shrink-0 rounded-full bg-surface-2/60 px-2.5 py-1 text-[10px] font-medium text-text-muted">
+            {countViewable(item)} role
+          </span>
           <button
             type="button"
             onClick={() => onEdit(item)}
-            className="invisible flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border text-text-muted transition hover:border-secondary hover:text-secondary group-hover:visible"
+            className="invisible flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary group-hover:visible"
             aria-label={`Edit akses ${item.label}`}
           >
             <IconEdit />
           </button>
-
           {hasChildren && (
             <button
               type="button"
               onClick={() => toggleExpand(item.id)}
-              className="flex h-5 w-5 shrink-0 items-center justify-center text-text-muted/60 hover:text-text-muted"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-muted/60 transition hover:bg-surface-2/60 hover:text-text-muted"
+              aria-label={isExpanded ? "Tutup" : "Buka"}
             >
               {isExpanded ? <IconChevronDown /> : <IconChevronRight />}
             </button>
@@ -222,8 +253,8 @@ function SidebarTree({
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="mt-0.5 mb-0.5">
-            {children.map((c) => renderItem(c, depth + 1))}
+          <div className="divide-y divide-border/40 border-t border-border/60">
+            {children.map((c) => renderChild(c))}
           </div>
         )}
       </div>
@@ -231,8 +262,8 @@ function SidebarTree({
   }
 
   return (
-    <div className="flex flex-col gap-0.5 p-2">
-      {roots.map((r) => renderItem(r))}
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {roots.map((r) => renderRoot(r))}
     </div>
   );
 }
@@ -306,31 +337,30 @@ function MenuFormPage({
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex w-fit items-center gap-1.5 text-xs text-text-muted transition hover:text-text-primary"
-        >
-          <IconBack />
-          Kembali ke Daftar Menu
-        </button>
-        <div className="mt-1 flex flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-text-muted transition hover:border-border hover:text-text-primary"
+            aria-label="Kembali"
+          >
+            <IconBack />
+          </button>
           <div>
-            <p className="text-xs uppercase tracking-widest text-text-muted">Setup / Menu</p>
-            <h1 className="text-xl font-bold text-text-primary">
+            <h1 className="text-xl font-bold tracking-tight text-text-primary">
               Akses Menu — {menu.label}
             </h1>
-            <p className="mt-0.5 text-sm text-text-muted">
+            <p className="text-sm text-text-muted">
               Atur operasi yang diizinkan per role untuk menu ini.
             </p>
           </div>
-          <div className="flex gap-2 sm:shrink-0">
-            <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
-              {saving ? "Menyimpan..." : "Simpan Perubahan"}
-            </Button>
-          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>Batal</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? "Menyimpan..." : "Simpan"}
+          </Button>
         </div>
       </div>
 
@@ -490,17 +520,6 @@ function MenuFormPage({
           </CardContent>
         </Card>
       </div>
-
-      {/* Bottom save bar */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-surface/80 px-5 py-3.5">
-        <p className="text-sm text-text-muted">
-          {totalActive} role dapat mengakses {menu.label}
-        </p>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack}>Batal</Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>Simpan Perubahan</Button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -616,21 +635,13 @@ function MenusContent() {
       </div>
 
       {/* Sidebar tree */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Navigasi Sidebar</CardTitle>
-              <CardDescription>
-                Hover pada menu lalu klik ikon edit untuk mengatur akses dan izin CRUD-nya.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0 pb-2">
-          <SidebarTree items={items} onEdit={openEdit} />
-        </CardContent>
-      </Card>
+      <div>
+        <h2 className="text-base font-semibold tracking-tight text-text-primary">Navigasi Sidebar</h2>
+        <p className="mt-1 text-sm text-text-muted">
+          Hover pada menu lalu klik ikon edit untuk mengatur akses dan izin CRUD-nya.
+        </p>
+      </div>
+      <SidebarTree items={items} onEdit={openEdit} />
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-surface/40 px-4 py-3">
