@@ -199,7 +199,7 @@ function SidebarTree({
         <button
           type="button"
           onClick={() => onEdit(item)}
-          className="invisible flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary group-hover:visible"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary"
           aria-label={`Edit akses ${item.label}`}
         >
           <IconEdit />
@@ -235,7 +235,7 @@ function SidebarTree({
           <button
             type="button"
             onClick={() => onEdit(item)}
-            className="invisible flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary group-hover:visible"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary"
             aria-label={`Edit akses ${item.label}`}
           >
             <IconEdit />
