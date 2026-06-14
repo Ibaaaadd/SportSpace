@@ -79,6 +79,30 @@ async function seedUsers() {
   console.log("✅ 4 user dummy siap (password: password123).");
 }
 
+async function seedSportTypes() {
+  const sportTypes = [
+    { name: "Padel", description: "Olahraga raket kombinasi tenis dan squash.", color: "blue", venueCount: 3 },
+    { name: "Futsal", description: "Sepak bola mini dalam ruangan.", color: "green", venueCount: 5 },
+    { name: "Mini Soccer", description: "Versi kecil sepak bola lapangan.", color: "yellow", venueCount: 2 },
+    { name: "Badminton", description: "Olahraga raket dengan shuttlecock.", color: "red", venueCount: 4 },
+    { name: "Tennis Indoor", description: "Tenis lapangan dalam ruangan.", color: "purple", venueCount: 1 },
+  ];
+
+  for (const sportType of sportTypes) {
+    await prisma.sportType.upsert({
+      where: { name: sportType.name },
+      update: {
+        description: sportType.description,
+        color: sportType.color,
+        venueCount: sportType.venueCount,
+      },
+      create: sportType,
+    });
+  }
+
+  console.log("✅ 5 sport type siap.");
+}
+
 // ─── Menus + permission per role ───────────────────────────────────────────
 
 type Perm = { view: boolean; create: boolean; edit: boolean; delete: boolean };
@@ -277,6 +301,7 @@ async function seedMenus() {
 async function main() {
   await seedRoles();
   await seedUsers();
+  await seedSportTypes();
   await seedMenus();
 }
 

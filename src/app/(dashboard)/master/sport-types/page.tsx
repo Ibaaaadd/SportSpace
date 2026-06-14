@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Pencil, Search, Trash2 } from "lucide-react";
 import Badge from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
 import {
@@ -14,18 +15,7 @@ import DataTable, { type Column } from "../../../../components/ui/DataTable";
 import Input from "../../../../components/ui/Input";
 import Modal from "../../../../components/ui/Modal";
 import { ToastProvider, useToast } from "../../../../components/ui/Toast";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type SportType = {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  venueCount: number;
-};
-
-type FormData = { name: string; description: string; color: string };
+import { EMPTY_FORM, normalizeSportType, type FormData, type FormErrors, type SportTypeItem } from "./_data";
 
 // ─── Color config ─────────────────────────────────────────────────────────────
 
@@ -57,69 +47,45 @@ const COLOR_BADGE: Record<string, string> = {
   pink:   "border-pink-500/40 bg-pink-500/10 text-pink-400",
 };
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const INITIAL_DATA: SportType[] = [
-  { id: "st-1", name: "Padel",        description: "Olahraga raket kombinasi tenis dan squash.",  color: "blue",   venueCount: 3 },
-  { id: "st-2", name: "Futsal",       description: "Sepak bola mini dalam ruangan.",               color: "green",  venueCount: 5 },
-  { id: "st-3", name: "Mini Soccer",  description: "Versi kecil sepak bola lapangan.",             color: "yellow", venueCount: 2 },
-  { id: "st-4", name: "Badminton",    description: "Olahraga raket dengan shuttlecock.",           color: "red",    venueCount: 4 },
-  { id: "st-5", name: "Tennis Indoor",description: "Tenis lapangan dalam ruangan.",                color: "purple", venueCount: 1 },
-];
-
-const EMPTY_FORM: FormData = { name: "", description: "", color: "blue" };
-
 // ─── Icons ────────────────────────────────────────────────────────────────────
-
-function IconEdit() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function IconTrash() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  );
-}
-
-function IconSearch() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-      <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
-    </svg>
-  );
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 function SportTypesContent() {
   const { push } = useToast();
-  const [items, setItems] = useState<SportType[]>(INITIAL_DATA);
+  const [items, setItems] = useState<SportTypeItem[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
-  const [errors, setErrors] = useState<Partial<FormData>>({});
-  const [editTarget, setEditTarget] = useState<SportType | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<SportType | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [editTarget, setEditTarget] = useState<SportTypeItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SportTypeItem | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  function handleRefresh() {
+  const handleRefresh = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => setLoading(false), 1200);
-  }
+    try {
+      const res = await fetch("/api/sport-types");
+      if (!res.ok) throw new Error("Gagal memuat data");
+      const data = await res.json();
+      setItems(data.map(normalizeSportType));
+    } catch {
+      push({ title: "Gagal memuat data", description: "Coba refresh halaman.", variant: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
 
-  const filtered = items.filter(
+  useEffect(() => {
+    handleRefresh();
+  }, [handleRefresh]);
+
+  const filtered = useMemo(() => items.filter(
     (i) =>
       i.name.toLowerCase().includes(search.toLowerCase()) ||
       i.description.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [items, search]);
 
   function openAdd() {
     setEditTarget(null);
@@ -128,7 +94,7 @@ function SportTypesContent() {
     setFormOpen(true);
   }
 
-  function openEdit(item: SportType) {
+  function openEdit(item: SportTypeItem) {
     setEditTarget(item);
     setForm({ name: item.name, description: item.description, color: item.color });
     setErrors({});
@@ -136,38 +102,71 @@ function SportTypesContent() {
   }
 
   function validate() {
-    const e: Partial<FormData> = {};
+    const e: FormErrors = {};
     if (!form.name.trim()) e.name = "Nama wajib diisi";
     return e;
   }
 
-  function handleSave() {
+  async function handleSave() {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
-    if (editTarget) {
-      setItems((prev) =>
-        prev.map((i) => (i.id === editTarget.id ? { ...i, ...form } : i))
-      );
-      push({ title: "Berhasil diperbarui", description: `${form.name} telah diupdate.`, variant: "success" });
-    } else {
-      setItems((prev) => [
-        { id: `st-${Date.now()}`, name: form.name.trim(), description: form.description.trim(), color: form.color, venueCount: 0 },
-        ...prev,
-      ]);
-      push({ title: "Berhasil ditambah", description: `${form.name} telah ditambahkan.`, variant: "success" });
+    setSubmitting(true);
+    try {
+      const res = await fetch(editTarget ? `/api/sport-types/${editTarget.id}` : "/api/sport-types", {
+        method: editTarget ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          color: form.color,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        push({ title: "Gagal menyimpan", description: data.error ?? "Terjadi kesalahan.", variant: "error" });
+        return;
+      }
+
+      push({
+        title: editTarget ? "Berhasil diperbarui" : "Berhasil ditambah",
+        description: `${form.name} ${editTarget ? "telah diupdate" : "telah ditambahkan"}.`,
+        variant: "success",
+      });
+      setFormOpen(false);
+      setEditTarget(null);
+      setForm(EMPTY_FORM);
+      await handleRefresh();
+    } catch {
+      push({ title: "Gagal menyimpan", description: "Terjadi kesalahan, coba lagi.", variant: "error" });
+    } finally {
+      setSubmitting(false);
     }
-    setFormOpen(false);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleteTarget) return;
-    setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
-    push({ title: "Dihapus", description: `${deleteTarget.name} telah dihapus.`, variant: "success" });
-    setDeleteTarget(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/sport-types/${deleteTarget.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        push({ title: "Gagal menghapus", description: data.error ?? "Terjadi kesalahan.", variant: "error" });
+        return;
+      }
+
+      push({ title: "Dihapus", description: `${deleteTarget.name} telah dihapus.`, variant: "success" });
+      setDeleteTarget(null);
+      await handleRefresh();
+    } catch {
+      push({ title: "Gagal menghapus", description: "Terjadi kesalahan, coba lagi.", variant: "error" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  const columns: Column<SportType>[] = [
+  const columns: Column<SportTypeItem>[] = [
     {
       key: "name",
       header: "Nama",
@@ -212,7 +211,7 @@ function SportTypesContent() {
             className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-secondary hover:text-secondary"
             aria-label="Edit"
           >
-            <IconEdit />
+            <Pencil className="h-3.5 w-3.5" strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -220,7 +219,7 @@ function SportTypesContent() {
             className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-red-500/60 hover:text-red-400"
             aria-label="Hapus"
           >
-            <IconTrash />
+            <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
           </button>
         </div>
       ),
@@ -236,8 +235,8 @@ function SportTypesContent() {
           <h1 className="text-xl font-bold text-text-primary">Jenis Olahraga</h1>
           <p className="mt-0.5 text-sm text-text-muted">Kelola kategori olahraga untuk semua venue.</p>
         </div>
-        <Button variant="primary" size="sm" onClick={openAdd}>
-          + Tambah Jenis
+        <Button variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" strokeWidth={2.5} />} onClick={openAdd}>
+          Tambah Jenis
         </Button>
       </div>
 
@@ -254,7 +253,7 @@ function SportTypesContent() {
                 placeholder="Cari nama atau deskripsi..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                leftIcon={<IconSearch />}
+                leftIcon={<Search className="h-3.5 w-3.5" strokeWidth={1.8} />}
               />
             </div>
           </div>
@@ -279,8 +278,8 @@ function SportTypesContent() {
         onClose={() => setFormOpen(false)}
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setFormOpen(false)}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={handleSave}>
+            <Button variant="ghost" size="sm" onClick={() => setFormOpen(false)} disabled={submitting}>Batal</Button>
+            <Button variant="primary" size="sm" onClick={handleSave} disabled={submitting}>
               {editTarget ? "Simpan Perubahan" : "Tambah"}
             </Button>
           </div>
@@ -338,8 +337,8 @@ function SportTypesContent() {
         size="sm"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Batal</Button>
-            <Button variant="danger" size="sm" onClick={handleDelete}>Hapus</Button>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)} disabled={submitting}>Batal</Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} disabled={submitting}>Hapus</Button>
           </div>
         }
       >
