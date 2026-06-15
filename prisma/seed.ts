@@ -298,10 +298,44 @@ async function seedMenus() {
   console.log(`✅ ${MENU_SEED.length} menu + permission per role siap.`);
 }
 
+// ─── Venues ─────────────────────────────────────────────────────────────────
+
+async function seedVenues() {
+  // Get sport types
+  const sportTypes = await prisma.sportType.findMany();
+  const sportTypeByName = Object.fromEntries(sportTypes.map((st) => [st.name, st.id]));
+
+  const venues = [
+    { name: "Padel Arena A", sportTypeId: sportTypeByName["Padel"], capacity: 4, location: "Lantai 2, Gedung Sport Center", description: "Lapangan padel premium dengan kaca tempered.", status: "ACTIVE" as const },
+    { name: "Padel Arena B", sportTypeId: sportTypeByName["Padel"], capacity: 4, location: "Lantai 2, Gedung Sport Center", description: "Lapangan padel dengan pencahayaan standar.", status: "ACTIVE" as const },
+    { name: "Padel Arena C", sportTypeId: sportTypeByName["Padel"], capacity: 4, location: "Lantai 2, Gedung Sport Center", description: "", status: "ACTIVE" as const },
+    { name: "Futsal Prime", sportTypeId: sportTypeByName["Futsal"], capacity: 14, location: "Lantai 1, Gedung Sport Center", description: "Lapangan futsal dengan rumput sintetis premium.", status: "ACTIVE" as const },
+    { name: "Futsal Standard", sportTypeId: sportTypeByName["Futsal"], capacity: 12, location: "Lantai 1, Gedung Sport Center", description: "Lapangan futsal standar dengan ac.", status: "ACTIVE" as const },
+    { name: "Mini Soccer 1", sportTypeId: sportTypeByName["Mini Soccer"], capacity: 16, location: "Outdoor, Area A", description: "Lapangan mini soccer outdoor dengan rumput sintetis.", status: "ACTIVE" as const },
+    { name: "Mini Soccer 2", sportTypeId: sportTypeByName["Mini Soccer"], capacity: 16, location: "Outdoor, Area B", description: "", status: "ACTIVE" as const },
+    { name: "Badminton Hall", sportTypeId: sportTypeByName["Badminton"], capacity: 4, location: "Lantai 3, Gedung Sport Center", description: "Aula badminton dengan standar internasional.", status: "ACTIVE" as const },
+    { name: "Badminton Court 2", sportTypeId: sportTypeByName["Badminton"], capacity: 4, location: "Lantai 3, Gedung Sport Center", description: "", status: "ACTIVE" as const },
+    { name: "Badminton Court 3", sportTypeId: sportTypeByName["Badminton"], capacity: 4, location: "Lantai 3, Gedung Sport Center", description: "", status: "ACTIVE" as const },
+    { name: "Badminton Court 4", sportTypeId: sportTypeByName["Badminton"], capacity: 4, location: "Lantai 3, Gedung Sport Center", description: "", status: "ACTIVE" as const },
+    { name: "Tennis Indoor 1", sportTypeId: sportTypeByName["Tennis Indoor"], capacity: 4, location: "Lantai 3, Gedung Sport Center", description: "Lapangan tenis indoor dengan standar ATP.", status: "INACTIVE" as const },
+  ];
+
+  for (const venue of venues) {
+    await prisma.venue.upsert({
+      where: { name: venue.name },
+      update: { status: venue.status },
+      create: venue,
+    });
+  }
+
+  console.log(`✅ ${venues.length} venue siap.`);
+}
+
 async function main() {
   await seedRoles();
   await seedUsers();
   await seedSportTypes();
+  await seedVenues();
   await seedMenus();
 }
 

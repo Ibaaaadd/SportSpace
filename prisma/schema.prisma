@@ -48,7 +48,26 @@ model SportType {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  venues Venue[]
+
   @@map("sport_types")
+}
+
+model Venue {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  sportTypeId String
+  capacity    Int
+  location    String
+  description String?
+  imageUrl    String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sportType SportType @relation(fields: [sportTypeId], references: [id], onDelete: Restrict)
+
+  @@map("venues")
 }
 
 model Menu {
