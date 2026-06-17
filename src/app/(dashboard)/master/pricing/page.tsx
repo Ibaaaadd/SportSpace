@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Badge, { type BadgeVariant } from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
 import {
@@ -44,19 +44,6 @@ type FormErrors = Partial<Record<keyof FormData, string>>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VENUE_OPTIONS = [
-  { value: "v-1", label: "Padel Arena A" },
-  { value: "v-2", label: "Padel Arena B" },
-  { value: "v-3", label: "Futsal Prime" },
-  { value: "v-4", label: "Mini Soccer 1" },
-  { value: "v-5", label: "Badminton Hall" },
-  { value: "v-6", label: "Tennis Indoor 1" },
-];
-
-const VENUE_NAME: Record<string, string> = Object.fromEntries(
-  VENUE_OPTIONS.map((o) => [o.value, o.label])
-);
-
 const DAY_TYPE_OPTIONS = [
   { value: "weekday", label: "Hari Kerja (Senin–Jumat)" },
   { value: "weekend", label: "Akhir Pekan (Sabtu–Minggu)" },
@@ -74,17 +61,6 @@ const DAY_TYPE_BADGE: Record<DayType, BadgeVariant> = {
   weekend: "success",
   holiday: "warning",
 };
-
-const INITIAL_PRICING: PricingRule[] = [
-  { id: "p-1", venueId: "v-1", venueName: "Padel Arena A",  label: "Off Peak",    dayType: "weekday", startTime: "06:00", endTime: "16:00", pricePerHour: 150000 },
-  { id: "p-2", venueId: "v-1", venueName: "Padel Arena A",  label: "Peak Hours",  dayType: "weekday", startTime: "16:00", endTime: "22:00", pricePerHour: 250000 },
-  { id: "p-3", venueId: "v-1", venueName: "Padel Arena A",  label: "Weekend",     dayType: "weekend", startTime: "06:00", endTime: "22:00", pricePerHour: 300000 },
-  { id: "p-4", venueId: "v-3", venueName: "Futsal Prime",   label: "Off Peak",    dayType: "weekday", startTime: "08:00", endTime: "17:00", pricePerHour: 200000 },
-  { id: "p-5", venueId: "v-3", venueName: "Futsal Prime",   label: "Peak Hours",  dayType: "weekday", startTime: "17:00", endTime: "23:00", pricePerHour: 350000 },
-  { id: "p-6", venueId: "v-3", venueName: "Futsal Prime",   label: "Akhir Pekan", dayType: "weekend", startTime: "08:00", endTime: "23:00", pricePerHour: 400000 },
-  { id: "p-7", venueId: "v-5", venueName: "Badminton Hall", label: "Reguler",     dayType: "weekday", startTime: "07:00", endTime: "22:00", pricePerHour: 80000  },
-  { id: "p-8", venueId: "v-5", venueName: "Badminton Hall", label: "Weekend",     dayType: "weekend", startTime: "07:00", endTime: "22:00", pricePerHour: 120000 },
-];
 
 const EMPTY_FORM: FormData = {
   venueId: "", label: "", dayType: "weekday", startTime: "08:00", endTime: "22:00", pricePerHour: "",
@@ -141,21 +117,49 @@ function IconTag() {
 
 function PricingContent() {
   const { push } = useToast();
-  const [rules, setRules] = useState<PricingRule[]>(INITIAL_PRICING);
+  const [rules, setRules] = useState<PricingRule[]>([]);
+  const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   const [filterVenue, setFilterVenue] = useState("");
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savingForm, setSavingForm] = useState(false);
 
-  function handleRefresh() {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1200);
-  }
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
   const [editTarget, setEditTarget] = useState<PricingRule | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PricingRule | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+
+  // Load venues
+  useEffect(() => {
+    fetch("/api/venues")
+      .then((res) => res.json())
+      .then((data) => setVenues(data))
+      .catch(() => setVenues([]));
+  }, []);
+
+  // Load pricing rules
+  const loadRules = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/pricing");
+      if (!res.ok) throw new Error("Gagal memuat data");
+      const data = await res.json();
+      setRules(data);
+    } catch {
+      push({ title: "Gagal memuat", description: "Gagal memuat data pricing. Coba refresh.", variant: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
+
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
+
+  const venueOptions = venues.map((v) => ({ value: v.id, label: v.name }));
 
   const filtered = useMemo(() => {
     return rules.filter((r) => {
@@ -205,43 +209,77 @@ function PricingContent() {
     return e;
   }
 
-  function handleSave() {
+  async function handleSave() {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
-    const venueName = VENUE_NAME[form.venueId] ?? "";
-
-    if (editTarget) {
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === editTarget.id
-            ? { ...r, venueId: form.venueId, venueName, label: form.label.trim(), dayType: form.dayType as DayType, startTime: form.startTime, endTime: form.endTime, pricePerHour: Number(form.pricePerHour) }
-            : r
-        )
-      );
-      push({ title: "Pricing diperbarui", description: `${form.label} berhasil diupdate.`, variant: "success" });
-    } else {
-      const newRule: PricingRule = {
-        id: `p-${Date.now()}`,
+    setSavingForm(true);
+    try {
+      const payload = {
         venueId: form.venueId,
-        venueName,
         label: form.label.trim(),
-        dayType: form.dayType as DayType,
+        dayType: form.dayType,
         startTime: form.startTime,
         endTime: form.endTime,
         pricePerHour: Number(form.pricePerHour),
       };
-      setRules((prev) => [newRule, ...prev]);
-      push({ title: "Pricing ditambahkan", description: `${form.label} berhasil ditambahkan.`, variant: "success" });
+
+      let res;
+      if (editTarget) {
+        res = await fetch(`/api/pricing/${editTarget.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/pricing", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        push({ title: "Gagal", description: data.error, variant: "error" });
+        return;
+      }
+
+      if (editTarget) {
+        setRules((prev) =>
+          prev.map((r) => r.id === editTarget.id ? (data as PricingRule) : r)
+        );
+        push({ title: "Pricing diperbarui", description: `${form.label} berhasil diupdate.`, variant: "success" });
+      } else {
+        setRules((prev) => [data, ...prev]);
+        push({ title: "Pricing ditambahkan", description: `${form.label} berhasil ditambahkan.`, variant: "success" });
+      }
+      setFormOpen(false);
+    } catch {
+      push({ title: "Gagal", description: "Terjadi kesalahan, coba lagi.", variant: "error" });
+    } finally {
+      setSavingForm(false);
     }
-    setFormOpen(false);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleteTarget) return;
-    setRules((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-    push({ title: "Pricing dihapus", description: `${deleteTarget.label} telah dihapus.`, variant: "success" });
-    setDeleteTarget(null);
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/pricing/${deleteTarget.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        push({ title: "Gagal menghapus", description: data.error, variant: "error" });
+        return;
+      }
+      setRules((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      push({ title: "Pricing dihapus", description: `${deleteTarget.label} telah dihapus.`, variant: "success" });
+      setDeleteTarget(null);
+    } catch {
+      push({ title: "Gagal menghapus", description: "Terjadi kesalahan, coba lagi.", variant: "error" });
+    } finally {
+      setDeleteLoading(false);
+    }
   }
 
   const avgPrice = rules.length
@@ -379,7 +417,7 @@ function PricingContent() {
                 <Select
                   value={filterVenue}
                   onChange={(e) => setFilterVenue(e.target.value)}
-                  options={VENUE_OPTIONS}
+                  options={venueOptions}
                   placeholder="Semua venue"
                 />
               </div>
@@ -400,7 +438,6 @@ function PricingContent() {
             data={filtered}
             emptyMessage="Tidak ada pricing rule ditemukan."
             loading={loading}
-            onRefresh={handleRefresh}
           />
         </CardContent>
       </Card>
@@ -415,8 +452,8 @@ function PricingContent() {
         size="md"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setFormOpen(false)}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={handleSave}>
+            <Button variant="ghost" size="sm" onClick={() => setFormOpen(false)} disabled={savingForm}>Batal</Button>
+            <Button variant="primary" size="sm" onClick={handleSave} loading={savingForm}>
               {editTarget ? "Simpan Perubahan" : "Tambah Rule"}
             </Button>
           </div>
@@ -428,7 +465,7 @@ function PricingContent() {
               label="Venue"
               value={form.venueId}
               onChange={(e) => setForm((f) => ({ ...f, venueId: e.target.value }))}
-              options={VENUE_OPTIONS}
+              options={venueOptions}
               placeholder="Pilih venue..."
               error={errors.venueId}
             />
@@ -490,8 +527,8 @@ function PricingContent() {
         size="sm"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Batal</Button>
-            <Button variant="danger" size="sm" onClick={handleDelete}>Hapus</Button>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>Batal</Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} loading={deleteLoading}>Hapus</Button>
           </div>
         }
       >
@@ -512,3 +549,4 @@ export default function PricingPage() {
     </ToastProvider>
   );
 }
+

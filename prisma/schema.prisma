@@ -66,8 +66,26 @@ model Venue {
   updatedAt   DateTime @updatedAt
 
   sportType SportType @relation(fields: [sportTypeId], references: [id], onDelete: Restrict)
+  pricing   Pricing[]
 
   @@map("venues")
+}
+
+model Pricing {
+  id          String   @id @default(cuid())
+  venueId     String
+  label       String
+  dayType     String   // weekday | weekend | holiday
+  startTime   String   // HH:mm format
+  endTime     String   // HH:mm format
+  pricePerHour Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, label, dayType])
+  @@map("pricing")
 }
 
 model Menu {
