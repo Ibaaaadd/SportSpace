@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 
-// GET /api/pricing — ambil semua pricing rules
-export async function GET() {
+// GET /api/pricing — ambil semua pricing rules (atau filter by venueId)
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const venueId = searchParams.get("venueId");
+
     const pricing = await prisma.pricing.findMany({
+      where: venueId ? { venueId } : undefined,
       select: {
         id: true,
         venueId: true,

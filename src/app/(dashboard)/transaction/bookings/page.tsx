@@ -44,8 +44,56 @@ function BookingsContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [pricings, setPricings] = useState<any[]>([]);
 
-  // Status options
+  // Utility: Determine day type (weekday, weekend, holiday)
+  const getDayType = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const day = date.getDay();
+    // 0 = Sunday, 6 = Saturday
+    return day === 0 || day === 6 ? 'weekend' : 'weekday';
+  };
+
+  // Utility: Calculate hours between two times (HH:mm format)
+  const calculateHours = (startTime: string, endTime: string): number => {
+    if (!startTime || !endTime) return 0;
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMin = startH * 60 + startM;
+    const endMin = endH * 60 + endM;
+    return (endMin - startMin) / 60;
+  };
+
+  // Utility: Find matching pricing rule
+  const findMatchingPrice = (venueId: string, bookingDate: string, startTime: string): number | null => {
+    if (!pricings.length) return null;
+    
+    const dayType = getDayType(bookingDate);
+    
+    // Find pricing yang sesuai dengan venue, dayType, dan jam
+    const matching = pricings.find(p => 
+      p.venueId === venueId && 
+      p.dayType === dayType &&
+      p.startTime <= startTime && 
+      p.endTime > startTime
+    );
+    
+    return matching?.pricePerHour || null;
+  };
+
+  // Utility: Auto-calculate total price
+  const autoCalculateTotal = (venueId: string, bookingDate: string, startTime: string, endTime: string) => {
+    if (!venueId || !bookingDate || !startTime || !endTime) return;
+    
+    const pricePerHour = findMatchingPrice(venueId, bookingDate, startTime);
+    if (!pricePerHour) return;
+    
+    const hours = calculateHours(startTime, endTime);
+    if (hours <= 0) return;
+    
+    const total = Math.round(pricePerHour * hours);
+    setForm((prev) => ({ ...prev, totalPrice: total.toString() }));
+  };
   const statusOptions = [
     { value: 'PENDING', label: 'Pending' },
     { value: 'CONFIRMED', label: 'Confirmed' },
@@ -96,7 +144,29 @@ function BookingsContent() {
     fetchData();
   }, [toast]);
 
-  // Filter bookings
+  // Fetch pricing ketika venueId berubah
+  useEffect(() => {
+    if (!form.venueId) {
+      setPricings([]);
+      return;
+    }
+
+    const fetchPricing = async () => {
+      try {
+        const res = await fetch(`/api/pricing?venueId=${form.venueId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPricings(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+      }
+    };
+
+    fetchPricing();
+  }, [form.venueId]);
+
+  // Auto-calculate ketika startTime atau endTime berubah
   const filtered = useMemo(() => {
     let result = bookings;
 
@@ -300,11 +370,20 @@ function BookingsContent() {
 
       {/* Modal Create Booking */}
       <Modal
-        isOpen={isModalOpen}
+        open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Booking Baru"
-        onConfirm={handleSubmit}
-        confirmText="Buat Booking"
+        variant="create"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setIsModalOpen(false)}>
+              Batal
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleSubmit}>
+              Buat Booking
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4">
           <div>
@@ -326,7 +405,8 @@ function BookingsContent() {
               label="Lapangan"
               value={form.venueId}
               onChange={(e) => {
-                setForm((prev) => ({ ...prev, venueId: e.target.value }));
+                const venueId = e.target.value;
+                setForm((prev) => ({ ...prev, venueId, totalPrice: '' }));
                 setErrors((prev) => ({ ...prev, venueId: '' }));
               }}
               options={venueOptions}
@@ -342,8 +422,12 @@ function BookingsContent() {
                 type="date"
                 value={form.bookingDate}
                 onChange={(e) => {
-                  setForm((prev) => ({ ...prev, bookingDate: e.target.value }));
+                  const bookingDate = e.target.value;
+                  setForm((prev) => ({ ...prev, bookingDate }));
                   setErrors((prev) => ({ ...prev, bookingDate: '' }));
+                  if (form.venueId && bookingDate && form.startTime && form.endTime) {
+                    autoCalculateTotal(form.venueId, bookingDate, form.startTime, form.endTime);
+                  }
                 }}
               />
               {errors.bookingDate && <p className="text-xs text-red-500 mt-1">{errors.bookingDate}</p>}
@@ -354,6 +438,7 @@ function BookingsContent() {
               <Input
                 type="number"
                 value={form.totalPrice}
+                readOnly
                 onChange={(e) => {
                   setForm((prev) => ({ ...prev, totalPrice: e.target.value }));
                   setErrors((prev) => ({ ...prev, totalPrice: '' }));
@@ -370,8 +455,12 @@ function BookingsContent() {
                 type="time"
                 value={form.startTime}
                 onChange={(e) => {
-                  setForm((prev) => ({ ...prev, startTime: e.target.value }));
+                  const startTime = e.target.value;
+                  setForm((prev) => ({ ...prev, startTime }));
                   setErrors((prev) => ({ ...prev, startTime: '' }));
+                  if (form.venueId && form.bookingDate && startTime && form.endTime) {
+                    autoCalculateTotal(form.venueId, form.bookingDate, startTime, form.endTime);
+                  }
                 }}
               />
               {errors.startTime && <p className="text-xs text-red-500 mt-1">{errors.startTime}</p>}
@@ -383,8 +472,12 @@ function BookingsContent() {
                 type="time"
                 value={form.endTime}
                 onChange={(e) => {
-                  setForm((prev) => ({ ...prev, endTime: e.target.value }));
+                  const endTime = e.target.value;
+                  setForm((prev) => ({ ...prev, endTime }));
                   setErrors((prev) => ({ ...prev, endTime: '' }));
+                  if (form.venueId && form.bookingDate && form.startTime && endTime) {
+                    autoCalculateTotal(form.venueId, form.bookingDate, form.startTime, endTime);
+                  }
                 }}
               />
               {errors.endTime && <p className="text-xs text-red-500 mt-1">{errors.endTime}</p>}
