@@ -9,7 +9,7 @@ export type BookingItem = {
   userName: string;
   venueId: string;
   venueName: string;
-  bookingDate: string; // ISO format
+  bookingDate: string;
   startTime: string;
   endTime: string;
   totalPrice: number;

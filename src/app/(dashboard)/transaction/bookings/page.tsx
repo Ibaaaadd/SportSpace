@@ -64,13 +64,11 @@ function BookingsContent() {
     return (endMin - startMin) / 60;
   };
 
-  // Utility: Find matching pricing rule
   const findMatchingPrice = (venueId: string, bookingDate: string, startTime: string): number | null => {
     if (!pricings.length) return null;
     
     const dayType = getDayType(bookingDate);
     
-    // Find pricing yang sesuai dengan venue, dayType, dan jam
     const matching = pricings.find(p => 
       p.venueId === venueId && 
       p.dayType === dayType &&
@@ -81,7 +79,6 @@ function BookingsContent() {
     return matching?.pricePerHour || null;
   };
 
-  // Utility: Auto-calculate total price
   const autoCalculateTotal = (venueId: string, bookingDate: string, startTime: string, endTime: string) => {
     if (!venueId || !bookingDate || !startTime || !endTime) return;
     
