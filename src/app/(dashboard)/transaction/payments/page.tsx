@@ -89,7 +89,6 @@ function PaymentsContent() {
     setIsDetailModalOpen(true);
   }, []);
 
-  // Show action modal
   const handleShowActionModal = useCallback((payment: PaymentItem, type: 'verify' | 'reject') => {
     setSelectedPayment(payment);
     setActionType(type);
@@ -97,7 +96,6 @@ function PaymentsContent() {
     setIsActionModalOpen(true);
   }, []);
 
-  // Verify payment
   const handleVerify = async () => {
     if (!selectedPayment) return;
 
