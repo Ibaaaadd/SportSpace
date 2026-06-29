@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         venueId: true,
-        venue: { select: { name: true } },
+        venue: { select: { name: true, imageUrl: true } },
         label: true,
         dayType: true,
         startTime: true,
@@ -27,6 +27,7 @@ export async function GET(request: Request) {
       pricing.map(({ venue, createdAt, ...p }: any) => ({
         ...p,
         venueName: venue.name,
+        venue: { imageUrl: venue.imageUrl },
       }))
     );
   } catch (err) {
