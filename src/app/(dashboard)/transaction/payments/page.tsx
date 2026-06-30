@@ -2,7 +2,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, X, Search, Eye } from 'lucide-react';
+import { Check, X, Search, Eye, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import Badge from '../../../../components/ui/Badge';
 import Button from '../../../../components/ui/Button';
 import {
@@ -214,6 +215,13 @@ function PaymentsContent() {
       header: 'Action',
       render: (row) => (
         <div className="flex gap-2">
+          <Link
+            href={`/transaction/payments/${row.id}`}
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground h-7 px-2"
+            title="Detail"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Link>
           {row.proofUrl && (
             <Button
               size="sm"
