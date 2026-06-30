@@ -6,7 +6,7 @@ import Button from '../../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import { ToastProvider, useToast } from '../../../components/ui/Toast';
-import { createToastHelpers } from '../../../lib/toast-helpers';
+import { createToastHelpers } from '../../../components/ui/Toast';
 
 type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
 type PaymentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';

@@ -8,7 +8,7 @@ import Input from '../../../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
 import Badge from '../../../../components/ui/Badge';
 import { ToastProvider, useToast } from '../../../../components/ui/Toast';
-import { createToastHelpers } from '../../../../lib/toast-helpers';
+import { createToastHelpers } from '../../../../components/ui/Toast';
 
 type BookingDetail = {
   id: string;

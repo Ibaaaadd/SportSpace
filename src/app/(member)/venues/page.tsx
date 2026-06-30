@@ -7,7 +7,7 @@ import Button from '../../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import { ToastProvider, useToast } from '../../../components/ui/Toast';
-import { createToastHelpers } from '../../../lib/toast-helpers';
+import { createToastHelpers } from '../../../components/ui/Toast';
 
 type Venue = {
   id: string;

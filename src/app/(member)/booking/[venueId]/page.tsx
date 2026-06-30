@@ -8,7 +8,7 @@ import Input from '../../../../components/ui/Input';
 import Select from '../../../../components/ui/Select';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
 import { ToastProvider, useToast } from '../../../../components/ui/Toast';
-import { createToastHelpers } from '../../../../lib/toast-helpers';
+import { createToastHelpers } from '../../../../components/ui/Toast';
 
 type VenueDetail = {
   id: string;
