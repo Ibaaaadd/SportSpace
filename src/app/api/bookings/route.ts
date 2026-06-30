@@ -11,10 +11,25 @@ function generateBookingCode(): string {
   return code;
 }
 
-// GET /api/bookings — fetch all bookings
-export async function GET() {
+// GET /api/bookings — fetch all bookings with optional venueId & bookingDate filter
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const venueId = searchParams.get("venueId");
+    const bookingDate = searchParams.get("bookingDate");
+
+    const whereClause: Record<string, unknown> = {};
+
+    if (venueId) whereClause.venueId = venueId;
+    if (bookingDate) {
+      const dateObj = new Date(bookingDate);
+      if (!isNaN(dateObj.getTime())) {
+        whereClause.bookingDate = dateObj;
+      }
+    }
+
     const bookings = await prisma.booking.findMany({
+      where: whereClause,
       include: {
         user: { select: { id: true, name: true, email: true } },
         venue: { select: { id: true, name: true } },
@@ -30,16 +45,23 @@ export async function GET() {
   }
 }
 
-// POST /api/bookings — create new booking
+// POST /api/bookings — create new booking + payment atomically
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, venueId, bookingDate, startTime, endTime, totalPrice, notes } = body;
+    const { userId, venueId, bookingDate, startTime, endTime, totalPrice, notes, paymentMethod } = body;
 
     // Validasi field wajib
     if (!userId?.trim() || !venueId?.trim() || !bookingDate?.trim() || !startTime?.trim() || !endTime?.trim()) {
       return NextResponse.json(
         { error: "Semua field wajib diisi (userId, venueId, bookingDate, startTime, endTime)." },
+        { status: 400 }
+      );
+    }
+
+    if (!paymentMethod?.trim()) {
+      return NextResponse.json(
+        { error: "Metode pembayaran wajib dipilih." },
         { status: 400 }
       );
     }
@@ -68,27 +90,79 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Format tanggal tidak valid." }, { status: 400 });
     }
 
-    // Create booking
-    const booking = await prisma.booking.create({
-      data: {
-        bookingCode: generateBookingCode(),
-        userId,
+    // Check for conflicts with existing PENDING/CONFIRMED bookings
+    const existingBooking = await prisma.booking.findFirst({
+      where: {
         venueId,
         bookingDate: bookingDateObj,
         startTime,
         endTime,
-        totalPrice,
-        notes: notes?.trim() || null,
-        status: "PENDING",
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        venue: { select: { id: true, name: true } },
-        payments: true,
+        status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
       },
     });
 
-    return NextResponse.json({ data: booking }, { status: 201 });
+    if (existingBooking) {
+      return NextResponse.json(
+        { error: "Slot sudah dipesan. Silakan pilih waktu lain." },
+        { status: 409 }
+      );
+    }
+
+    // Atomic transaction: create booking + payment + slot lock
+    const result = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.create({
+        data: {
+          bookingCode: generateBookingCode(),
+          userId,
+          venueId,
+          bookingDate: bookingDateObj,
+          startTime,
+          endTime,
+          totalPrice,
+          notes: notes?.trim() || null,
+          status: "PENDING",
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          venue: { select: { id: true, name: true } },
+        },
+      });
+
+      // Create payment record
+      const payment = await tx.payment.create({
+        data: {
+          bookingId: booking.id,
+          method: paymentMethod,
+          amountPaid: totalPrice,
+          status: "PENDING",
+        },
+      });
+
+      // Create slot lock (expires in 24 hours)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      await tx.slotLock.create({
+        data: {
+          bookingId: booking.id,
+          userId,
+          venueId,
+          bookingDate: bookingDateObj,
+          startTime,
+          endTime,
+          expiresAt,
+        },
+      });
+
+      return { booking, payment };
+    });
+
+    return NextResponse.json({
+      data: {
+        ...result.booking,
+        payments: [result.payment],
+      },
+    }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/bookings]", err);
     return NextResponse.json({ error: "Gagal membuat booking." }, { status: 500 });

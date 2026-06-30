@@ -1,10 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 
-// DELETE /api/bookings/[id] — cancel booking
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+// GET /api/bookings/[id] — get booking detail
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        venue: { select: { id: true, name: true } },
+        payments: { orderBy: { createdAt: "desc" } },
+      },
+    });
+
+    if (!booking) {
+      return NextResponse.json({ error: "Booking tidak ditemukan." }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: booking });
+  } catch (err) {
+    console.error("[GET /api/bookings/[id]]", err);
+    return NextResponse.json({ error: "Gagal mengambil data booking." }, { status: 500 });
+  }
+}
+
+// DELETE /api/bookings/[id] — cancel booking
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
 
     // Cek booking exists
     const booking = await prisma.booking.findUnique({ where: { id } });

@@ -3,6 +3,7 @@ import type { SelectHTMLAttributes } from "react";
 export type SelectOption = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 export type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
@@ -52,6 +53,7 @@ export default function Select({
             <option
               key={opt.value}
               value={opt.value}
+              disabled={opt.disabled}
               style={{ backgroundColor: "var(--surface)" }}
             >
               {opt.label}

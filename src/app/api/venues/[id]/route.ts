@@ -21,7 +21,7 @@ export async function GET(_req: Request, { params }: Params) {
       return NextResponse.json({ error: "Venue tidak ditemukan." }, { status: 404 });
     }
 
-    return NextResponse.json(venue);
+    return NextResponse.json({ data: venue });
   } catch (err) {
     console.error("[GET /api/venues/:id]", err);
     return NextResponse.json({ error: "Gagal mengambil data venue." }, { status: 500 });

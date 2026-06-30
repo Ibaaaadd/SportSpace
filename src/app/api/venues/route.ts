@@ -14,7 +14,7 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json(venues);
+    return NextResponse.json({ data: venues });
   } catch (err) {
     console.error("[GET /api/venues]", err);
     return NextResponse.json({ error: "Gagal mengambil data venue." }, { status: 500 });
