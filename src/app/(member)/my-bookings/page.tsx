@@ -46,6 +46,8 @@ function MyBookingsContent() {
   const t = createToastHelpers(toastContext);
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -92,6 +94,11 @@ function MyBookingsContent() {
     }).format(price);
   };
 
+  const totalPages = Math.ceil(bookings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBookings = bookings.slice(startIndex, endIndex);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -115,57 +122,98 @@ function MyBookingsContent() {
 
   return (
     <div className="space-y-4">
-      {bookings.map((booking) => {
-        const statusBadge = STATUS_BADGE[booking.status];
-        const paymentBadge = booking.latestPayment
-          ? PAYMENT_STATUS_BADGE[booking.latestPayment.status]
-          : null;
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {paginatedBookings.map((booking) => {
+          const statusBadge = STATUS_BADGE[booking.status];
+          const paymentBadge = booking.latestPayment
+            ? PAYMENT_STATUS_BADGE[booking.latestPayment.status]
+            : null;
 
-        return (
-          <Card key={booking.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono font-semibold text-sm">{booking.bookingCode}</p>
+          return (
+            <Card key={booking.id} className="flex flex-col">
+              <CardContent className="p-4 flex-1">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-mono font-semibold text-xs text-text-muted">{booking.bookingCode}</p>
                     <Badge className={statusBadge.color}>{statusBadge.label}</Badge>
                     {paymentBadge && (
                       <Badge className={paymentBadge.color}>{paymentBadge.label}</Badge>
                     )}
                   </div>
 
-                  <p className="font-medium">{booking.venueName}</p>
+                  <p className="font-medium text-sm line-clamp-2">{booking.venueName}</p>
 
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-2 text-xs">
                     <div className="flex items-center gap-2 text-text-muted">
-                      <Calendar className="h-4 w-4" />
+                      <Calendar className="h-3.5 w-3.5 shrink-0" />
                       <span>{booking.bookingDate}</span>
                     </div>
                     <div className="flex items-center gap-2 text-text-muted">
-                      <Clock className="h-4 w-4" />
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
                       <span>{booking.startTime} - {booking.endTime}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary pt-2">
                     <DollarSign className="h-4 w-4" />
                     <span>{formatPrice(booking.totalPrice)}</span>
                   </div>
                 </div>
+              </CardContent>
 
-                {booking.status === 'PENDING' && !booking.latestPayment && (
+              {booking.status === 'PENDING' && !booking.latestPayment && (
+                <div className="px-4 pb-4 pt-2 border-t border-border">
                   <Button
                     size="sm"
+                    className="w-full"
                     onClick={() => window.location.href = `/booking/checkout?bookingId=${booking.id}`}
                   >
                     Bayar
                   </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`h-8 w-8 rounded text-sm font-medium transition ${
+                  currentPage === page
+                    ? 'bg-primary text-surface'
+                    : 'border border-border text-text-primary hover:border-primary'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

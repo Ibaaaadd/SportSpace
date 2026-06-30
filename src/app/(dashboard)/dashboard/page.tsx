@@ -214,6 +214,8 @@ function DashboardContent() {
   const { push } = useToast();
   const [autoConfirm, setAutoConfirm] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   const today = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
@@ -256,26 +258,83 @@ function DashboardContent() {
         ))}
       </div>
 
-      {/* Main grid */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+       {/* Main grid */}
+       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
 
-        {/* Recent bookings */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Bookings</CardTitle>
-                <CardDescription>Transaksi terbaru dari semua venue.</CardDescription>
-              </div>
-              <Button variant="outline" size="sm">
-                Lihat Semua
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <DataTable columns={columns} data={bookings} />
-          </CardContent>
-        </Card>
+         {/* Recent bookings */}
+         <Card>
+           <CardHeader>
+             <div className="flex items-center justify-between">
+               <div>
+                 <CardTitle>Recent Bookings</CardTitle>
+                 <CardDescription>Transaksi terbaru dari semua venue.</CardDescription>
+               </div>
+               <Button variant="outline" size="sm">
+                 Lihat Semua
+               </Button>
+             </div>
+           </CardHeader>
+           <CardContent>
+             <div className="space-y-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                 {bookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((booking) => (
+                   <div key={booking.id} className="rounded-lg border border-border bg-surface/50 p-3">
+                     <div className="space-y-2">
+                       <div className="flex items-center justify-between">
+                         <span className="font-mono text-xs font-semibold text-text-muted">{booking.id}</span>
+                         {statusBadge(booking.status)}
+                       </div>
+                       <p className="text-sm font-medium">{booking.venue}</p>
+                       <div className="text-xs text-text-muted">
+                         <p>{booking.slot}</p>
+                         <div className="flex items-center gap-2 mt-2">
+                           <Avatar name={booking.member} size="xs" />
+                           <span>{booking.member}</span>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+
+               {Math.ceil(bookings.length / itemsPerPage) > 1 && (
+                 <div className="flex items-center justify-center gap-2 pt-2">
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     disabled={currentPage === 1}
+                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                   >
+                     Prev
+                   </Button>
+                   <div className="flex items-center gap-1">
+                     {Array.from({ length: Math.ceil(bookings.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                       <button
+                         key={page}
+                         onClick={() => setCurrentPage(page)}
+                         className={`h-6 w-6 text-xs font-medium rounded transition ${
+                           currentPage === page
+                             ? 'bg-primary text-surface'
+                             : 'border border-border text-text-primary hover:border-primary'
+                         }`}
+                       >
+                         {page}
+                       </button>
+                     ))}
+                   </div>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     disabled={currentPage === Math.ceil(bookings.length / itemsPerPage)}
+                     onClick={() => setCurrentPage(p => Math.min(Math.ceil(bookings.length / itemsPerPage), p + 1))}
+                   >
+                     Next
+                   </Button>
+                 </div>
+               )}
+             </div>
+           </CardContent>
+         </Card>
 
         {/* Right panel */}
         <div className="flex flex-col gap-4">

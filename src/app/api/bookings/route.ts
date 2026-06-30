@@ -11,12 +11,16 @@ function generateBookingCode(): string {
   return code;
 }
 
-// GET /api/bookings — fetch all bookings with optional venueId & bookingDate filter
+// GET /api/bookings — fetch bookings with pagination, optional venueId & bookingDate filter
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const venueId = searchParams.get("venueId");
     const bookingDate = searchParams.get("bookingDate");
+    const search = searchParams.get("search");
+    const status = searchParams.get("status");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)));
 
     const whereClause: Record<string, unknown> = {};
 
@@ -27,18 +31,50 @@ export async function GET(request: Request) {
         whereClause.bookingDate = dateObj;
       }
     }
+    if (status && status !== '') {
+      whereClause.status = status;
+    }
 
-    const bookings = await prisma.booking.findMany({
-      where: whereClause,
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        venue: { select: { id: true, name: true } },
-        payments: { orderBy: { createdAt: "desc" }, take: 1 },
+    if (search && search.trim()) {
+      const searchLower = search.toLowerCase();
+      whereClause.OR = [
+        { bookingCode: { contains: searchLower, mode: 'insensitive' } },
+        { user: { name: { contains: searchLower, mode: 'insensitive' } } },
+        { venue: { name: { contains: searchLower, mode: 'insensitive' } } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [total, bookings] = await Promise.all([
+      prisma.booking.count({ where: whereClause }),
+      prisma.booking.findMany({
+        where: whereClause,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          venue: { select: { id: true, name: true } },
+          payments: { orderBy: { createdAt: "desc" }, take: 1 },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      data: bookings,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        currentRowsCount: bookings.length,
+        next_page: page < totalPages ? page + 1 : null,
+        prev_page: page > 1 ? page - 1 : null,
       },
-      orderBy: { createdAt: "desc" },
     });
-
-    return NextResponse.json({ data: bookings });
   } catch (err) {
     console.error("[GET /api/bookings]", err);
     return NextResponse.json({ error: "Gagal mengambil data booking." }, { status: 500 });
